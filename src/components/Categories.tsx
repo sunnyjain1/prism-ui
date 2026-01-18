@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { categoryService } from '../lib/services/context';
 import type { Category } from '../lib/core/models';
 import { Plus, Trash2, Tag } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+
 
 const Categories: React.FC = () => {
     const [categories, setCategories] = useState<Category[]>([]);
@@ -9,6 +11,8 @@ const Categories: React.FC = () => {
     const [newName, setNewName] = useState('');
     const [newType, setNewType] = useState<'income' | 'expense'>('expense');
     const [newColor, setNewColor] = useState('#6366f1');
+    const { user } = useAuth();
+
 
     const loadCategories = async () => {
         try {
@@ -60,10 +64,19 @@ const Categories: React.FC = () => {
                     <h1 style={{ fontSize: '32px', marginBottom: '4px' }}>Categories</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Organize your transactions with custom categories.</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setIsAdding(true)}>
+                <button
+                    className="btn btn-primary"
+                    onClick={() => setIsAdding(true)}
+                    disabled={user?.role === 'viewer'}
+                    style={{
+                        opacity: user?.role === 'viewer' ? 0.6 : 1,
+                        cursor: user?.role === 'viewer' ? 'not-allowed' : 'pointer'
+                    }}
+                >
                     <Plus size={18} />
-                    Add Category
+                    {user?.role === 'viewer' ? 'Read-Only' : 'Add Category'}
                 </button>
+
             </header>
 
             {isAdding && (
@@ -126,7 +139,12 @@ const Categories: React.FC = () => {
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                            <button type="submit" className="btn btn-primary">Create Category</button>
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
+                                disabled={user?.role === 'viewer'}
+                            >Create Category</button>
+
                             <button type="button" className="btn" onClick={() => setIsAdding(false)} style={{ border: '1px solid var(--border)' }}>Cancel</button>
                         </div>
                     </form>
@@ -148,10 +166,16 @@ const Categories: React.FC = () => {
                                 <span style={{ fontWeight: '500' }}>{cat.name}</span>
                                 <button
                                     onClick={() => handleDelete(cat.id)}
-                                    style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+                                    disabled={user?.role === 'viewer'}
+                                    style={{
+                                        marginLeft: 'auto', background: 'transparent', border: 'none',
+                                        color: 'var(--text-muted)', cursor: user?.role === 'viewer' ? 'not-allowed' : 'pointer',
+                                        padding: '4px', opacity: user?.role === 'viewer' ? 0.3 : 1
+                                    }}
                                 >
                                     <Trash2 size={16} />
                                 </button>
+
                             </div>
                         ))}
                     </div>

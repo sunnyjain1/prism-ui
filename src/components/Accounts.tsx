@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { accountService } from '../lib/services/context';
 import type { Account } from '../lib/core/models';
-import { CreditCard, Landmark, Banknote, TrendingUp, Plus } from 'lucide-react';
+import { CreditCard, Landmark, Banknote, TrendingUp, Plus, Calendar } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+
 
 const Accounts: React.FC = () => {
     const [accounts, setAccounts] = useState<Account[]>([]);
@@ -9,6 +11,9 @@ const Accounts: React.FC = () => {
     const [newName, setNewName] = useState('');
     const [newType, setNewType] = useState<Account['type']>('checking');
     const [newCurrency, setNewCurrency] = useState('USD');
+    const [limit, setLimit] = useState('');
+    const { user } = useAuth();
+
 
     const loadAccounts = async () => {
         try {
@@ -29,6 +34,7 @@ const Accounts: React.FC = () => {
         try {
             await accountService.createAccount(newName, newType, newCurrency);
             setNewName('');
+            setLimit('');
             setIsAdding(false);
             loadAccounts();
         } catch (e) {
@@ -48,12 +54,8 @@ const Accounts: React.FC = () => {
 
     const getCurrencySymbol = (code: string) => {
         switch (code) {
-            case 'USD': return '$';
-            case 'EUR': return '€';
-            case 'GBP': return '£';
-            case 'INR': return '₹';
-            case 'JPY': return '¥';
-            default: return code + ' ';
+            case 'USD': return '$'; case 'EUR': return '€'; case 'GBP': return '£';
+            case 'INR': return '₹'; case 'JPY': return '¥'; default: return code + ' ';
         }
     };
 
@@ -61,13 +63,22 @@ const Accounts: React.FC = () => {
         <div className="accounts">
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <div>
-                    <h1 style={{ fontSize: '32px', marginBottom: '4px' }}>My Accounts</h1>
+                    <h1 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '4px' }}>My Accounts</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Manage your bank accounts, credit cards, and cash.</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setIsAdding(true)}>
+                <button
+                    className="btn btn-primary"
+                    onClick={() => setIsAdding(true)}
+                    disabled={user?.role === 'viewer'}
+                    style={{
+                        opacity: user?.role === 'viewer' ? 0.6 : 1,
+                        cursor: user?.role === 'viewer' ? 'not-allowed' : 'pointer'
+                    }}
+                >
                     <Plus size={18} />
-                    Add Account
+                    {user?.role === 'viewer' ? 'Read-Only' : 'Add Account'}
                 </button>
+
             </header>
 
             {isAdding && (
@@ -80,15 +91,8 @@ const Accounts: React.FC = () => {
                                 type="text"
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
-                                placeholder="e.g. HDFC Savings"
-                                style={{
-                                    padding: '12px',
-                                    borderRadius: '8px',
-                                    border: '1px solid var(--border)',
-                                    background: 'transparent',
-                                    color: 'inherit',
-                                    fontFamily: 'inherit'
-                                }}
+                                placeholder="e.g. Chase Sapphire"
+                                style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent', color: 'inherit' }}
                                 required
                             />
                         </div>
@@ -98,14 +102,7 @@ const Accounts: React.FC = () => {
                                 <select
                                     value={newType}
                                     onChange={(e) => setNewType(e.target.value as any)}
-                                    style={{
-                                        padding: '12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid var(--border)',
-                                        background: 'transparent',
-                                        color: 'inherit',
-                                        fontFamily: 'inherit'
-                                    }}
+                                    style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'inherit' }}
                                 >
                                     <option value="checking">Checking</option>
                                     <option value="savings">Savings</option>
@@ -119,14 +116,7 @@ const Accounts: React.FC = () => {
                                 <select
                                     value={newCurrency}
                                     onChange={(e) => setNewCurrency(e.target.value)}
-                                    style={{
-                                        padding: '12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid var(--border)',
-                                        background: 'transparent',
-                                        color: 'inherit',
-                                        fontFamily: 'inherit'
-                                    }}
+                                    style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'inherit' }}
                                 >
                                     <option value="USD">USD ($)</option>
                                     <option value="EUR">EUR (€)</option>
@@ -136,40 +126,101 @@ const Accounts: React.FC = () => {
                                 </select>
                             </div>
                         </div>
+
+                        {newType === 'credit' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <label style={{ fontSize: '14px', fontWeight: '500' }}>Credit Limit</label>
+                                <input
+                                    type="number"
+                                    value={limit}
+                                    onChange={(e) => setLimit(e.target.value)}
+                                    placeholder="5000"
+                                    style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent', color: 'inherit' }}
+                                />
+                            </div>
+                        )}
+
                         <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                            <button type="submit" className="btn btn-primary">Create Account</button>
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
+                                disabled={user?.role === 'viewer'}
+                            >Create Account</button>
+
                             <button type="button" className="btn" onClick={() => setIsAdding(false)} style={{ border: '1px solid var(--border)' }}>Cancel</button>
                         </div>
                     </form>
                 </div>
             )}
 
-            <div className="accounts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
-                {accounts.map(account => (
-                    <div key={account.id} className="card" style={{ position: 'relative', overflow: 'hidden' }}>
-                        <div style={{
-                            position: 'absolute',
-                            top: 0,
-                            right: 0,
-                            padding: '16px',
-                            color: 'var(--text-muted)',
-                            opacity: 0.2
-                        }}>
-                            {getIcon(account.type)}
+            <div className="accounts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+                {accounts.map(account => {
+                    const isCredit = account.type === 'credit';
+                    // Mock Credit limit for UI demonstration since backend might not store it yet
+                    const mockLimit = 10000;
+                    const spentPercent = isCredit ? Math.min(Math.abs(account.balance) / mockLimit * 100, 100) : 0;
+
+                    return (
+                        <div key={account.id} className="card" style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div style={{ padding: '10px', borderRadius: '12px', background: 'var(--bg-main)', color: 'var(--primary)' }}>
+                                    {getIcon(account.type)}
+                                </div>
+                                <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    {account.type}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '4px' }}>{account.name}</h3>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>**** **** **** 4242</div>
+                            </div>
+
+                            <div style={{ marginTop: 'auto' }}>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Current Balance</div>
+                                <div style={{ fontSize: '24px', fontWeight: '800', color: account.balance < 0 && !isCredit ? 'var(--expense)' : 'var(--text-main)' }}>
+                                    {getCurrencySymbol(account.currency)}{Math.abs(account.balance).toLocaleString()}
+                                    {account.balance < 0 && !isCredit && <span style={{ fontSize: '14px', fontWeight: '500', marginLeft: '4px' }}>(Overdrawn)</span>}
+                                </div>
+                            </div>
+
+                            {isCredit && (
+                                <div style={{ marginTop: '8px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '6px' }}>
+                                        <span style={{ color: 'var(--text-muted)' }}>Credit Utilization</span>
+                                        <span style={{ fontWeight: '600' }}>{spentPercent.toFixed(0)}%</span>
+                                    </div>
+                                    <div style={{ height: '6px', background: 'var(--border-soft)', borderRadius: '3px', overflow: 'hidden' }}>
+                                        <div style={{
+                                            height: '100%',
+                                            width: `${spentPercent}%`,
+                                            background: spentPercent > 80 ? 'var(--expense)' : 'var(--income)',
+                                            borderRadius: '3px',
+                                            transition: 'width 0.5s ease-out'
+                                        }}></div>
+                                    </div>
+                                    <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                        <Calendar size={14} />
+                                        <span>Billing cycle ends in 12 days</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!isCredit && (
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                    <div style={{ flex: 1, padding: '8px', borderRadius: '10px', background: 'var(--bg-main)', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>This Month</div>
+                                        <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--income)' }}>+$2,400</div>
+                                    </div>
+                                    <div style={{ flex: 1, padding: '8px', borderRadius: '10px', background: 'var(--bg-main)', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>Expenses</div>
+                                        <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--expense)' }}>-$1,250</div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        <div style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <span style={{ textTransform: 'capitalize' }}>{account.type}</span>
-                            <span>{account.currency}</span>
-                        </div>
-                        <h3 style={{ fontSize: '20px', marginBottom: '16px' }}>{account.name}</h3>
-                        <div style={{ fontSize: '28px', fontWeight: '700' }}>
-                            {getCurrencySymbol(account.currency)}{account.balance.toLocaleString()}
-                        </div>
-                        <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
-                            <button className="btn" style={{ fontSize: '12px', padding: '6px 12px', border: '1px solid var(--border)' }}>View details</button>
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

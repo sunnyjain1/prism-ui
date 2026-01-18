@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -6,11 +6,34 @@ import Accounts from './components/Accounts';
 import Categories from './components/Categories';
 import Reports from './components/Reports';
 import Settings from './components/Settings';
+import Login from './components/Login';
+import Register from './components/Register';
 import TransactionDialog from './components/TransactionDialog';
-import { Plus } from 'lucide-react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Plus, Loader2 } from 'lucide-react';
 
-const App: React.FC = () => {
+const AuthController: React.FC = () => {
+    const { token, isLoading } = useAuth();
+    const [authView, setAuthView] = useState<'login' | 'register'>('login');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    useEffect(() => {
+        const handleSwitch = (e: any) => setAuthView(e.detail);
+        window.addEventListener('switch-auth', handleSwitch);
+        return () => window.removeEventListener('switch-auth', handleSwitch);
+    }, []);
+
+    if (isLoading) {
+        return (
+            <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-main)' }}>
+                <Loader2 className="animate-spin" size={48} color="var(--primary)" />
+            </div>
+        );
+    }
+
+    if (!token) {
+        return authView === 'login' ? <Login /> : <Register />;
+    }
 
     return (
         <Router>
@@ -52,4 +75,13 @@ const App: React.FC = () => {
     );
 };
 
+const App: React.FC = () => {
+    return (
+        <AuthProvider>
+            <AuthController />
+        </AuthProvider>
+    );
+};
+
 export default App;
+
