@@ -1,0 +1,31 @@
+{
+  "name": "prism-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@material/web": "^2.4.1",
+    "@nanostores/lit": "^0.2.3",
+    "@observablehq/plot": "^0.6.17",
+    "@types/uuid": "^10.0.0",
+    "d3": "^7.9.0",
+    "dexie": "^4.2.1",
+    "lit": "^3.3.1",
+    "nanostores": "^1.1.0",
+    "rxdb": "^16.21.1",
+    "rxjs": "^7.8.2",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.8",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
+  }
+}
