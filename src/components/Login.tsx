@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Mail, Lock, LogIn, Loader2 } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
+
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -19,7 +21,7 @@ const Login: React.FC = () => {
             formData.append('username', email);
             formData.append('password', password);
 
-            const response = await fetch('http://localhost:8000/auth/login', {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData,
@@ -33,7 +35,7 @@ const Login: React.FC = () => {
             const { access_token } = await response.json();
 
             // Get user info
-            const userRes = await fetch('http://localhost:8000/auth/me', {
+            const userRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/me`, {
                 headers: { 'Authorization': `Bearer ${access_token}` }
             });
             const userData = await userRes.json();
@@ -45,6 +47,33 @@ const Login: React.FC = () => {
             setIsSubmitting(false);
         }
     };
+
+    const handleGoogleSuccess = async (credentialResponse: any) => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: credentialResponse.credential }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Google login failed');
+            }
+
+            const { access_token } = await response.json();
+
+            // Get user info
+            const userRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${access_token}` }
+            });
+            const userData = await userRes.json();
+
+            login(access_token, userData);
+        } catch (err: any) {
+            setError(err.message || 'Google login failed');
+        }
+    };
+
 
     return (
         <div style={{
@@ -117,6 +146,43 @@ const Login: React.FC = () => {
                         )}
                     </button>
                 </form>
+
+                <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '12px' }}>
+                        <div style={{ height: '1px', flex: 1, background: 'var(--border)' }}></div>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>OR</span>
+                        <div style={{ height: '1px', flex: 1, background: 'var(--border)' }}></div>
+                    </div>
+
+                    <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => setError('Google Login Failed')}
+                        theme="filled_black"
+                        shape="circle"
+                    />
+
+                    {/* Developer Mock Auth Button */}
+                    <button
+                        onClick={() => handleGoogleSuccess({ credential: 'dev-token-prism' })}
+                        style={{
+                            marginTop: '8px',
+                            background: 'transparent',
+                            border: '1px dashed var(--primary)',
+                            color: 'var(--primary)',
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            opacity: 0.6,
+                            transition: 'opacity 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                        onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+                    >
+                        Dev Mock Login
+                    </button>
+                </div>
+
 
                 <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', color: 'var(--text-muted)' }}>
                     Don't have an account? <span
