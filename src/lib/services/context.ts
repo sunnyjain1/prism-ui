@@ -4,7 +4,7 @@ import { CategoryService } from './CategoryService';
 import { RemoteRepository } from '../repositories/RemoteRepository';
 import type { Transaction, Account, Category } from '../core/models';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000') + '/api';
 
 const transactionRepo = new RemoteRepository<Transaction>(API_URL, 'transactions');
 const accountRepo = new RemoteRepository<Account>(API_URL, 'accounts');

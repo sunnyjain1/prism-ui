@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { accountService, transactionService, categoryService } from '../lib/services/context';
+import { useAuth } from '../contexts/AuthContext';
+
+
 import type { Transaction, Account, Category } from '../lib/core/models';
 import {
     ArrowUpRight, ArrowDownRight,
@@ -11,7 +14,9 @@ import {
 } from 'recharts';
 
 const Dashboard: React.FC = () => {
+    const { user } = useAuth();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 });
@@ -150,8 +155,9 @@ const Dashboard: React.FC = () => {
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <div>
                     <h1 style={{ fontSize: '32px', fontWeight: '700', letterSpacing: '-0.02em', marginBottom: '4px' }}>
-                        Hello, Sunny!
+                        Hello, {user?.full_name?.split(' ')[0] || 'User'}!
                     </h1>
+
                     <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Here's your financial pulse for this month.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
