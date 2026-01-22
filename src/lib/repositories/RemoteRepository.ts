@@ -10,7 +10,7 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
     }
 
     private get url() {
-        return `${this.baseUrl}/${this.endpoint}/`.replace(/\/+$/, '/');
+        return `${this.baseUrl}/${this.endpoint}`;
     }
 
     private getHeaders() {
@@ -44,7 +44,7 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
     }
 
     async findById(id: string): Promise<T | null> {
-        const response = await fetch(`${this.url}${id}/`, {
+        const response = await fetch(`${this.url}/${id}`, {
             headers: this.getHeaders()
         });
 
@@ -54,7 +54,7 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
     }
 
     async update(id: string, item: Partial<T>): Promise<T> {
-        const response = await fetch(`${this.url}${id}/`, {
+        const response = await fetch(`${this.url}/${id}`, {
             method: 'PUT',
             headers: this.getHeaders(),
             body: JSON.stringify(item),
@@ -65,7 +65,7 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
     }
 
     async delete(id: string): Promise<void> {
-        const response = await fetch(`${this.url}${id}/`, {
+        const response = await fetch(`${this.url}/${id}`, {
             method: 'DELETE',
             headers: this.getHeaders(),
         });

@@ -37,7 +37,7 @@ export class TransactionService {
     }
 
     async exportTransactions(): Promise<void> {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/transactions/export/`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/transactions/export`);
         if (!response.ok) throw new Error('Failed to export transactions');
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -52,7 +52,7 @@ export class TransactionService {
     async importTransactions(file: File): Promise<any> {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/transactions/import/`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/transactions/import`, {
             method: 'POST',
             body: formData
         });
