@@ -10,7 +10,7 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
     }
 
     private get url() {
-        return `${this.baseUrl}/${this.endpoint}`;
+        return `${this.baseUrl}/${this.endpoint}/`.replace(/\/+$/, '/');
     }
 
     private getHeaders() {

@@ -21,7 +21,7 @@ const Login: React.FC = () => {
             formData.append('username', email);
             formData.append('password', password);
 
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/login`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/login/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData,
@@ -35,7 +35,7 @@ const Login: React.FC = () => {
             const { access_token } = await response.json();
 
             // Get user info
-            const userRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/me`, {
+            const userRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/me/`, {
                 headers: { 'Authorization': `Bearer ${access_token}` }
             });
             const userData = await userRes.json();
@@ -50,7 +50,7 @@ const Login: React.FC = () => {
 
     const handleGoogleSuccess = async (credentialResponse: any) => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/google`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/google/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token: credentialResponse.credential }),
