@@ -1,8 +1,12 @@
 import type { IRepository } from '../core/interfaces';
-import type { Transaction } from '../core/models';
+import type { Transaction, Account } from '../core/models';
 
 export class TransactionService {
     private repository: IRepository<Transaction>;
+
+    private readonly EXCHANGE_RATES: Record<string, number> = {
+        'USD': 1, 'EUR': 0.92, 'GBP': 0.79, 'INR': 83.12, 'JPY': 148.25
+    };
 
     constructor(repository: IRepository<Transaction>) {
         this.repository = repository;
@@ -25,10 +29,6 @@ export class TransactionService {
         return this.repository.findAll({ month, year });
     }
 
-    async deleteTransaction(id: string): Promise<void> {
-        return this.repository.delete(id);
-    }
-
     async getMonthSummary(month: number, year: number) {
         const transactions = await this.getTransactionsByMonth(month, year);
         const income = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
@@ -36,8 +36,32 @@ export class TransactionService {
         return { income, expense, balance: income - expense };
     }
 
+    async deleteTransaction(id: string): Promise<void> {
+        return this.repository.delete(id);
+    }
+
+    convert(amount: number, fromCurrency: string, toCurrency: string) {
+        if (fromCurrency === toCurrency) return amount;
+        const inUSD = amount / (this.EXCHANGE_RATES[fromCurrency] || 1);
+        return inUSD * (this.EXCHANGE_RATES[toCurrency] || 1);
+    }
+
+    calculateSummary(txs: Transaction[], accs: Account[], displayCurrency: string) {
+        let income = 0;
+        let expense = 0;
+
+        txs.forEach(t => {
+            const account = accs.find(a => a.id === t.account_id);
+            const amt = this.convert(t.amount, account?.currency || 'USD', displayCurrency);
+            if (t.type === 'income') income += amt;
+            else if (t.type === 'expense') expense += amt;
+        });
+
+        return { income, expense, balance: income - expense };
+    }
+
     async exportTransactions(): Promise<void> {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/transactions/export`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/transactions/export`);
         if (!response.ok) throw new Error('Failed to export transactions');
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -52,7 +76,7 @@ export class TransactionService {
     async importTransactions(file: File): Promise<any> {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/transactions/import`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/transactions/import`, {
             method: 'POST',
             body: formData
         });
@@ -60,4 +84,3 @@ export class TransactionService {
         return response.json();
     }
 }
-
