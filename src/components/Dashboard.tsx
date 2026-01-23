@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { accountService, transactionService, categoryService } from '../lib/services/context';
 import { useAuth } from '../contexts/AuthContext';
-
+import { formatCurrency, getMonthName, formatDate } from '../lib/utils/formatters';
 
 import type { Transaction, Account, Category } from '../lib/core/models';
 import {
@@ -16,7 +16,6 @@ import {
 const Dashboard: React.FC = () => {
     const { user } = useAuth();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
-
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 });
@@ -27,16 +26,6 @@ const Dashboard: React.FC = () => {
     // Filters
     const [chartType, setChartType] = useState<'income' | 'expense'>('expense');
     const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
-
-    const EXCHANGE_RATES: Record<string, number> = {
-        'USD': 1, 'EUR': 0.92, 'GBP': 0.79, 'INR': 83.12, 'JPY': 148.25
-    };
-
-    const convert = (amount: number, fromCurrency: string, toCurrency: string) => {
-        if (fromCurrency === toCurrency) return amount;
-        const inUSD = amount / (EXCHANGE_RATES[fromCurrency] || 1);
-        return inUSD * (EXCHANGE_RATES[toCurrency] || 1);
-    };
 
     const loadData = async () => {
         try {
@@ -49,24 +38,12 @@ const Dashboard: React.FC = () => {
             setTransactions(txs);
             setAccounts(accs);
             setCategories(cats);
-            calculateSummary(txs, accs, displayCurrency);
+
+            const newSummary = transactionService.calculateSummary(txs, accs, displayCurrency);
+            setSummary(newSummary);
         } catch (e) {
             console.error('Failed to load dashboard data', e);
         }
-    };
-
-    const calculateSummary = (txs: Transaction[], accs: Account[], currency: string) => {
-        let income = 0;
-        let expense = 0;
-
-        txs.forEach(t => {
-            const account = accs.find(a => a.id === t.account_id);
-            const convertedAmount = convert(t.amount, account?.currency || 'USD', currency);
-            if (t.type === 'income') income += convertedAmount;
-            if (t.type === 'expense') expense += convertedAmount;
-        });
-
-        setSummary({ income, expense, balance: income - expense });
     };
 
     const handleExport = async () => {
@@ -95,7 +72,8 @@ const Dashboard: React.FC = () => {
     }, [month, year]);
 
     useEffect(() => {
-        calculateSummary(transactions, accounts, displayCurrency);
+        const newSummary = transactionService.calculateSummary(transactions, accounts, displayCurrency);
+        setSummary(newSummary);
     }, [displayCurrency, transactions, accounts]);
 
     // Chart Data Processing
@@ -109,7 +87,7 @@ const Dashboard: React.FC = () => {
         filtered.forEach(t => {
             const day = new Date(t.date).getDate().toString();
             const account = accounts.find(a => a.id === t.account_id);
-            const amt = convert(t.amount, account?.currency || 'USD', displayCurrency);
+            const amt = transactionService.convert(t.amount, account?.currency || 'USD', displayCurrency);
             dailyMap.set(day, (dailyMap.get(day) || 0) + amt);
         });
 
@@ -131,7 +109,7 @@ const Dashboard: React.FC = () => {
             .reduce((acc: any[], t) => {
                 const catName = t.category?.name || 'General';
                 const account = accounts.find(a => a.id === t.account_id);
-                const convertedAmount = convert(t.amount, account?.currency || 'USD', displayCurrency);
+                const convertedAmount = transactionService.convert(t.amount, account?.currency || 'USD', displayCurrency);
 
                 const existing = acc.find(i => i.name === catName);
                 if (existing) existing.value += convertedAmount;
@@ -143,13 +121,6 @@ const Dashboard: React.FC = () => {
 
     const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-    const getCurrencySymbol = (code: string) => {
-        switch (code) {
-            case 'USD': return '$'; case 'EUR': return '€'; case 'GBP': return '£';
-            case 'INR': return '₹'; case 'JPY': return '¥'; default: return code + ' ';
-        }
-    };
-
     return (
         <div className="dashboard">
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
@@ -157,7 +128,6 @@ const Dashboard: React.FC = () => {
                     <h1 style={{ fontSize: '32px', fontWeight: '700', letterSpacing: '-0.02em', marginBottom: '4px' }}>
                         Hello, {user?.full_name?.split(' ')[0] || 'User'}!
                     </h1>
-
                     <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Here's your financial pulse for this month.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
@@ -182,7 +152,7 @@ const Dashboard: React.FC = () => {
                         <button onClick={() => { setMonth(month === 1 ? 12 : month - 1); if (month === 1) setYear(year - 1); }}
                             style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>&lt;</button>
                         <span style={{ fontWeight: '600', minWidth: '140px', textAlign: 'center', fontSize: '14px' }}>
-                            {new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                            {getMonthName(month, year)}
                         </span>
                         <button onClick={() => { setMonth(month === 12 ? 1 : month + 1); if (month === 12) setYear(year + 1); }}
                             style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>&gt;</button>
@@ -219,7 +189,7 @@ const Dashboard: React.FC = () => {
                             </div>
                         </div>
                         <div style={{ fontSize: '28px', fontWeight: '700' }}>
-                            {typeof item.val === 'number' ? getCurrencySymbol(displayCurrency) + item.val.toLocaleString() : item.val}
+                            {typeof item.val === 'number' ? formatCurrency(item.val, displayCurrency) : item.val}
                         </div>
                     </div>
                 ))}
@@ -268,7 +238,7 @@ const Dashboard: React.FC = () => {
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
                                 <Tooltip
                                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                                    formatter={(val: any) => [getCurrencySymbol(displayCurrency) + (val || 0).toFixed(2), chartType === 'expense' ? 'Expense' : 'Income']}
+                                    formatter={(val: any) => [formatCurrency(val as number, displayCurrency), chartType === 'expense' ? 'Expense' : 'Income']}
                                 />
                                 <Area type="monotone" dataKey="amount" stroke={chartType === 'expense' ? 'var(--expense)' : 'var(--income)'} strokeWidth={3} fillOpacity={1} fill="url(#colorAmt)" />
                             </AreaChart>
@@ -295,7 +265,7 @@ const Dashboard: React.FC = () => {
                             <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px' }}>
                                 <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: COLORS[index % COLORS.length] }}></div>
                                 <span style={{ color: 'var(--text-main)', fontWeight: '500' }}>{item.name}</span>
-                                <span style={{ marginLeft: 'auto', fontWeight: 'bold' }}>{getCurrencySymbol(displayCurrency)}{item.value.toFixed(0)}</span>
+                                <span style={{ marginLeft: 'auto', fontWeight: 'bold' }}>{formatCurrency(item.value, displayCurrency)}</span>
                             </div>
                         ))}
                     </div>
@@ -310,7 +280,7 @@ const Dashboard: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {transactions.slice(0, 5).map(t => {
                         const account = accounts.find(a => a.id === t.account_id);
-                        const amt = convert(t.amount, account?.currency || 'USD', displayCurrency);
+                        const amt = transactionService.convert(t.amount, account?.currency || 'USD', displayCurrency);
                         return (
                             <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '12px', borderRadius: '16px', background: 'var(--bg-main)', transition: 'transform 0.2s' }}>
                                 <div style={{
@@ -321,11 +291,11 @@ const Dashboard: React.FC = () => {
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontWeight: '600', color: 'var(--text-main)' }}>{t.description}</div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t.category?.name || 'General'} • {new Date(t.date).toLocaleDateString()}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t.category?.name || 'General'} • {formatDate(t.date)}</div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <div style={{ fontWeight: '700', color: t.type === 'expense' ? 'var(--expense)' : 'var(--income)' }}>
-                                        {t.type === 'expense' ? '-' : '+'}{getCurrencySymbol(displayCurrency)}{amt.toFixed(2)}
+                                        {t.type === 'expense' ? '-' : '+'}{formatCurrency(amt, displayCurrency)}
                                     </div>
                                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{account?.name}</div>
                                 </div>
