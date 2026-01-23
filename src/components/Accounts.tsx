@@ -173,7 +173,11 @@ const Accounts: React.FC = () => {
 
                             <div>
                                 <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '4px' }}>{account.name}</h3>
-                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>**** **** **** 4242</div>
+                                {account.type === 'credit' ? (
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>**** **** **** {account.id.slice(-4)}</div>
+                                ) : (
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{account.currency} Account</div>
+                                )}
                             </div>
 
                             <div style={{ marginTop: 'auto' }}>
@@ -200,8 +204,7 @@ const Accounts: React.FC = () => {
                                         }}></div>
                                     </div>
                                     <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                                        <Calendar size={14} />
-                                        <span>Billing cycle ends in 12 days</span>
+                                        <span>Billing cycle ends soon</span>
                                     </div>
                                 </div>
                             )}
@@ -210,11 +213,15 @@ const Accounts: React.FC = () => {
                                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                                     <div style={{ flex: 1, padding: '8px', borderRadius: '10px', background: 'var(--bg-main)', textAlign: 'center' }}>
                                         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>This Month</div>
-                                        <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--income)' }}>+$2,400</div>
+                                        <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--income)' }}>
+                                            {getCurrencySymbol(account.currency)}0
+                                        </div>
                                     </div>
                                     <div style={{ flex: 1, padding: '8px', borderRadius: '10px', background: 'var(--bg-main)', textAlign: 'center' }}>
                                         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>Expenses</div>
-                                        <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--expense)' }}>-$1,250</div>
+                                        <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--expense)' }}>
+                                            {getCurrencySymbol(account.currency)}0
+                                        </div>
                                     </div>
                                 </div>
                             )}

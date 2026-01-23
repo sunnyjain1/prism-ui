@@ -127,14 +127,14 @@ const Reports: React.FC = () => {
                     <div style={{ fontSize: '14px', opacity: 0.8, marginBottom: '8px' }}>Total Period Income</div>
                     <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{getCurrencySymbol(displayCurrency)}{stats.income.toLocaleString()}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '12px', fontSize: '13px', background: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', width: 'fit-content' }}>
-                        <ArrowUpRight size={14} /> 12% vs last period
+                        <TrendingUp size={14} /> Performance
                     </div>
                 </div>
                 <div className="card" style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white' }}>
                     <div style={{ fontSize: '14px', opacity: 0.8, marginBottom: '8px' }}>Total Period Expenses</div>
                     <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{getCurrencySymbol(displayCurrency)}{stats.expense.toLocaleString()}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '12px', fontSize: '13px', background: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', width: 'fit-content' }}>
-                        <ArrowDownRight size={14} /> 5% vs last period
+                        <TrendingDown size={14} /> Efficiency
                     </div>
                 </div>
                 <div className="card">
