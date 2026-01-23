@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { accountService } from '../lib/services/context';
 import type { Account } from '../lib/core/models';
-import { CreditCard, Landmark, Banknote, TrendingUp, Plus, Calendar } from 'lucide-react';
+import { CreditCard, Landmark, Banknote, TrendingUp, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 

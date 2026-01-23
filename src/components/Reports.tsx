@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { transactionService, accountService } from '../lib/services/context';
 import type { Transaction, Account } from '../lib/core/models';
 import {
-    TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight
+    TrendingUp, TrendingDown, Wallet
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
