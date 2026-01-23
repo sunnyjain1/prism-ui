@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Wallet, Tag, Settings, BarChart3, LogOut, User as UserIcon } from 'lucide-react';
+import { LayoutDashboard, Wallet, Tag, Settings, BarChart3, LogOut, User as UserIcon, Database } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Sidebar: React.FC = () => {
@@ -10,6 +10,7 @@ const Sidebar: React.FC = () => {
         { name: 'Accounts', path: '/accounts', icon: Wallet },
         { name: 'Categories', path: '/categories', icon: Tag },
         { name: 'Reports', path: '/reports', icon: BarChart3 },
+        { name: 'Bulk Upload', path: '/bulk-upload', icon: Database },
         { name: 'Settings', path: '/settings', icon: Settings },
     ];
 

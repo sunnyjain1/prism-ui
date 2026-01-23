@@ -9,6 +9,7 @@ import Settings from './components/Settings';
 import Login from './components/Login';
 import Register from './components/Register';
 import TransactionDialog from './components/TransactionDialog';
+import BulkUpload from './components/BulkUpload';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Plus, Loader2 } from 'lucide-react';
 
@@ -46,6 +47,7 @@ const AuthController: React.FC = () => {
                         <Route path="/categories" element={<Categories />} />
                         <Route path="/reports" element={<Reports />} />
                         <Route path="/settings" element={<Settings />} />
+                        <Route path="/bulk-upload" element={<BulkUpload />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
 
