@@ -17,6 +17,7 @@ export interface Transaction extends Entity {
     category_id?: string;
     category?: Category;
     destination_account_id?: string;
+    notes?: string;
 }
 
 export interface Account extends Entity {

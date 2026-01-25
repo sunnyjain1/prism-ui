@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { accountService } from '../lib/services/context';
 import type { Account } from '../lib/core/models';
 import { CreditCard, Landmark, Banknote, TrendingUp, Plus } from 'lucide-react';
@@ -6,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 
 const Accounts: React.FC = () => {
+    const navigate = useNavigate();
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState('');
@@ -161,7 +163,14 @@ const Accounts: React.FC = () => {
                     const spentPercent = isCredit ? Math.min(Math.abs(account.balance) / mockLimit * 100, 100) : 0;
 
                     return (
-                        <div key={account.id} className="card" style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div
+                            key={account.id}
+                            className="card"
+                            onClick={() => navigate(`/accounts/${account.id}`)}
+                            style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '16px', cursor: 'pointer', transition: 'transform 0.2s', border: '1px solid var(--border)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div style={{ padding: '10px', borderRadius: '12px', background: 'var(--bg-main)', color: 'var(--primary)' }}>
                                     {getIcon(account.type)}

@@ -1,12 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Wallet, Tag, Settings, BarChart3, LogOut, User as UserIcon, Database } from 'lucide-react';
+import { LayoutDashboard, Wallet, Tag, Settings, BarChart3, LogOut, User as UserIcon, Database, List } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Sidebar: React.FC = () => {
     const { user, logout } = useAuth();
     const menuItems = [
         { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+        { name: 'Transactions', path: '/transactions', icon: List },
         { name: 'Accounts', path: '/accounts', icon: Wallet },
         { name: 'Categories', path: '/categories', icon: Tag },
         { name: 'Reports', path: '/reports', icon: BarChart3 },

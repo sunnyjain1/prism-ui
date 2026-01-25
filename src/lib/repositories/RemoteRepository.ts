@@ -9,11 +9,11 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
         this.endpoint = endpoint;
     }
 
-    private get url() {
+    public get url() {
         return `${this.baseUrl}/${this.endpoint}`;
     }
 
-    private getHeaders() {
+    public getHeaders() {
         const token = localStorage.getItem('token');
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (token) {
@@ -34,8 +34,21 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
     }
 
     async findAll(params?: any): Promise<T[]> {
-        const query = params ? '?' + new URLSearchParams(params).toString() : '';
-        const response = await fetch(`${this.url}${query}`, {
+        let queryString = '';
+        if (params) {
+            const searchParams = new URLSearchParams();
+            Object.keys(params).forEach(key => {
+                const value = params[key];
+                if (Array.isArray(value)) {
+                    value.forEach(v => searchParams.append(key, v));
+                } else if (value !== undefined && value !== null) {
+                    searchParams.append(key, value);
+                }
+            });
+            queryString = '?' + searchParams.toString();
+        }
+
+        const response = await fetch(`${this.url}${queryString}`, {
             headers: this.getHeaders()
         });
 

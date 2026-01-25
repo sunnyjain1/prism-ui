@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { accountService, transactionService, categoryService } from '../lib/services/context';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, getMonthName, formatDate } from '../lib/utils/formatters';
@@ -6,16 +7,19 @@ import { formatCurrency, getMonthName, formatDate } from '../lib/utils/formatter
 import type { Transaction, Account, Category } from '../lib/core/models';
 import {
     ArrowUpRight, ArrowDownRight,
-    BarChart3, TrendingUp, Filter, Download, Upload, ChevronDown
+    BarChart3, TrendingUp, Filter, Download, Upload, ChevronDown,
+    Search
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
-    AreaChart, Area, XAxis, YAxis, CartesianGrid
+    AreaChart, Area, XAxis, YAxis, CartesianGrid,
+    BarChart, Bar, Legend
 } from 'recharts';
 
 const Dashboard: React.FC = () => {
     const { user } = useAuth();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [history, setHistory] = useState<any[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 });
@@ -23,27 +27,23 @@ const Dashboard: React.FC = () => {
     const [year, setYear] = useState(new Date().getFullYear());
     const [displayCurrency, setDisplayCurrency] = useState(localStorage.getItem('dashboardCurrency') || 'INR');
 
-    useEffect(() => {
-        const handleCurrencyChange = (e: CustomEvent) => setDisplayCurrency(e.detail);
-        window.addEventListener('currency-changed', handleCurrencyChange as EventListener);
-        return () => window.removeEventListener('currency-changed', handleCurrencyChange as EventListener);
-    }, []);
-
-    // Filters
+    // Filters (Charts)
     const [chartType, setChartType] = useState<'income' | 'expense'>('expense');
     const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
 
     const loadData = async () => {
         try {
-            const [txs, accs, cats] = await Promise.all([
+            const [txs, accs, cats, hist] = await Promise.all([
                 transactionService.getTransactionsByMonth(month, year),
                 accountService.getAccounts(),
-                categoryService.getCategories()
+                categoryService.getCategories(),
+                transactionService.getHistory(6)
             ]);
 
             setTransactions(txs);
             setAccounts(accs);
             setCategories(cats);
+            setHistory(hist);
 
             const newSummary = transactionService.calculateSummary(txs, accs, displayCurrency);
             setSummary(newSummary);
@@ -70,6 +70,12 @@ const Dashboard: React.FC = () => {
             console.error('Import failed', e);
         }
     };
+
+    useEffect(() => {
+        const handleCurrencyChange = (e: CustomEvent) => setDisplayCurrency(e.detail);
+        window.addEventListener('currency-changed', handleCurrencyChange as EventListener);
+        return () => window.removeEventListener('currency-changed', handleCurrencyChange as EventListener);
+    }, []);
 
     useEffect(() => {
         loadData();
@@ -137,7 +143,12 @@ const Dashboard: React.FC = () => {
                     <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Here's your financial pulse for this month.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-
+                    <Link to="/transactions" style={{
+                        background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '10px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)'
+                    }} title="Search Transactions">
+                        <Search size={20} />
+                    </Link>
 
                     <div className="card" style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '12px', borderRadius: '16px' }}>
                         <button onClick={() => { setMonth(month === 1 ? 12 : month - 1); if (month === 1) setYear(year - 1); }}
@@ -185,6 +196,26 @@ const Dashboard: React.FC = () => {
                     </div>
                 ))}
             </div>
+
+            <section className="card" style={{ marginBottom: '24px', padding: '24px' }}>
+                <h3 style={{ marginBottom: '24px', fontSize: '18px' }}>Monthly Trends (Last 6 Months)</h3>
+                <div style={{ height: '300px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={history}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-soft)" />
+                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
+                            <Tooltip
+                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                                formatter={(val: number) => formatCurrency(val, displayCurrency)}
+                            />
+                            <Legend />
+                            <Bar dataKey="income" name="Income" fill="var(--income)" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="expense" name="Expense" fill="var(--expense)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </section>
 
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '24px' }}>
                 <section className="card" style={{ padding: '0' }}>
@@ -272,7 +303,7 @@ const Dashboard: React.FC = () => {
             <section className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                     <h3 style={{ margin: 0, fontSize: '18px' }}>Recent Activity</h3>
-                    <button className="btn" style={{ fontSize: '12px', padding: '6px 12px', border: '1px solid var(--border)' }}>View All</button>
+                    <Link to="/transactions" className="btn" style={{ fontSize: '12px', padding: '6px 12px', border: '1px solid var(--border)', textDecoration: 'none', color: 'var(--text-main)' }}>View All</Link>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {transactions.slice(0, 5).map(t => {

@@ -25,15 +25,24 @@ export class TransactionService {
         return this.repository.findAll({ limit });
     }
 
-    async getTransactionsByMonth(month: number, year: number): Promise<Transaction[]> {
-        return this.repository.findAll({ month, year });
+    async getHistory(months: number = 6): Promise<{ month: string, income: number, expense: number }[]> {
+        const response = await fetch(`${this.repository['url']}/history?months=${months}`, {
+            headers: this.repository['getHeaders']()
+        });
+        if (!response.ok) throw new Error('Failed to fetch history');
+        return response.json();
     }
 
-    async getMonthSummary(month: number, year: number) {
-        const transactions = await this.getTransactionsByMonth(month, year);
-        const income = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-        const expense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-        return { income, expense, balance: income - expense };
+    async getTransactions(params: { month?: number; year?: number; start_date?: string; end_date?: string; search?: string; category_ids?: string[]; account_id?: string }): Promise<Transaction[]> {
+        return this.repository.findAll(params);
+    }
+
+    async getTransactionsByMonth(month: number, year: number): Promise<Transaction[]> {
+        return this.getTransactions({ month, year });
+    }
+
+    async updateTransaction(id: string, transaction: Partial<Transaction>): Promise<Transaction> {
+        return this.repository.update(id, transaction);
     }
 
     async deleteTransaction(id: string): Promise<void> {
