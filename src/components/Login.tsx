@@ -162,25 +162,27 @@ const Login: React.FC = () => {
                     />
 
                     {/* Developer Mock Auth Button */}
-                    <button
-                        onClick={() => handleGoogleSuccess({ credential: 'dev-token-prism' })}
-                        style={{
-                            marginTop: '8px',
-                            background: 'transparent',
-                            border: '1px dashed var(--primary)',
-                            color: 'var(--primary)',
-                            padding: '8px 16px',
-                            borderRadius: '20px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            opacity: 0.6,
-                            transition: 'opacity 0.2s'
-                        }}
-                        onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-                        onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
-                    >
-                        Dev Mock Login
-                    </button>
+                    {import.meta.env.DEV && (
+                        <button
+                            onClick={() => handleGoogleSuccess({ credential: 'dev-token-prism' })}
+                            style={{
+                                marginTop: '8px',
+                                background: 'transparent',
+                                border: '1px dashed var(--primary)',
+                                color: 'var(--primary)',
+                                padding: '8px 16px',
+                                borderRadius: '20px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                opacity: 0.6,
+                                transition: 'opacity 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                            onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+                        >
+                            Dev Mock Login
+                        </button>
+                    )}
                 </div>
 
 

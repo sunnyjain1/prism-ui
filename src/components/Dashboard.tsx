@@ -6,7 +6,7 @@ import { formatCurrency, getMonthName, formatDate } from '../lib/utils/formatter
 import type { Transaction, Account, Category } from '../lib/core/models';
 import {
     ArrowUpRight, ArrowDownRight,
-    BarChart3, TrendingUp, Filter, Download, Upload
+    BarChart3, TrendingUp, Filter, Download, Upload, ChevronDown
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -214,14 +214,20 @@ const Dashboard: React.FC = () => {
                                         background: chartType === 'income' ? 'var(--income)' : 'transparent', color: chartType === 'income' ? 'white' : 'var(--text-muted)'
                                     }}>Income</button>
                             </div>
-                            <select
-                                value={selectedCategoryId}
-                                onChange={(e) => setSelectedCategoryId(e.target.value)}
-                                style={{ padding: '6px 12px', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '12px', fontWeight: '500', background: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}
-                            >
-                                <option value="all">All Categories</option>
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
+                            <div style={{ position: 'relative' }}>
+                                <select
+                                    value={selectedCategoryId}
+                                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                                    style={{
+                                        padding: '6px 32px 6px 12px', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '12px', fontWeight: '500',
+                                        background: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none'
+                                    }}
+                                >
+                                    <option value="all">All Categories</option>
+                                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                                <ChevronDown size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }} />
+                            </div>
                         </div>
                     </div>
                     <div style={{ height: '350px', padding: '24px' }}>

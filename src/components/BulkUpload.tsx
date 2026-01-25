@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { accountService } from '../lib/services/context';
 import type { Account } from '../lib/core/models';
-import { Upload, FileText, BarChart, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, FileText, BarChart, CheckCircle2, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
 
 const BulkUpload: React.FC = () => {
     const [accounts, setAccounts] = useState<Account[]>([]);
@@ -85,14 +85,21 @@ const BulkUpload: React.FC = () => {
 
                     <div style={{ marginBottom: '24px' }}>
                         <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>2. Target Account (Optional)</label>
-                        <select
-                            value={selectedAccount}
-                            onChange={(e) => setSelectedAccount(e.target.value)}
-                            style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'inherit' }}
-                        >
-                            <option value="">Auto-detect or Ask Later</option>
-                            {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</option>)}
-                        </select>
+                        <div style={{ position: 'relative' }}>
+                            <select
+                                value={selectedAccount}
+                                onChange={(e) => setSelectedAccount(e.target.value)}
+                                style={{
+                                    width: '100%', padding: '12px', paddingRight: '40px', borderRadius: '12px',
+                                    border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'inherit',
+                                    appearance: 'none', WebkitAppearance: 'none'
+                                }}
+                            >
+                                <option value="">Auto-detect or Ask Later</option>
+                                {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</option>)}
+                            </select>
+                            <ChevronDown size={20} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }} />
+                        </div>
                     </div>
 
                     <div style={{ marginBottom: '32px' }}>
