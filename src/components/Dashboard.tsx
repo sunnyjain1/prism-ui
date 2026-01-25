@@ -23,6 +23,12 @@ const Dashboard: React.FC = () => {
     const [year, setYear] = useState(new Date().getFullYear());
     const [displayCurrency, setDisplayCurrency] = useState(localStorage.getItem('dashboardCurrency') || 'INR');
 
+    useEffect(() => {
+        const handleCurrencyChange = (e: CustomEvent) => setDisplayCurrency(e.detail);
+        window.addEventListener('currency-changed', handleCurrencyChange as EventListener);
+        return () => window.removeEventListener('currency-changed', handleCurrencyChange as EventListener);
+    }, []);
+
     // Filters
     const [chartType, setChartType] = useState<'income' | 'expense'>('expense');
     const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
@@ -131,22 +137,7 @@ const Dashboard: React.FC = () => {
                     <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Here's your financial pulse for this month.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <div className="glass" style={{ padding: '4px', borderRadius: '14px', display: 'flex', gap: '4px', border: '1px solid var(--border)' }}>
-                        {['USD', 'EUR', 'GBP', 'INR'].map(cur => (
-                            <button
-                                key={cur}
-                                onClick={() => { setDisplayCurrency(cur); localStorage.setItem('dashboardCurrency', cur); }}
-                                style={{
-                                    padding: '6px 12px', borderRadius: '10px', border: 'none', fontSize: '12px', fontWeight: '600',
-                                    background: displayCurrency === cur ? 'var(--primary)' : 'transparent',
-                                    color: displayCurrency === cur ? 'white' : 'var(--text-muted)',
-                                    cursor: 'pointer', transition: 'all 0.2s'
-                                }}
-                            >
-                                {cur}
-                            </button>
-                        ))}
-                    </div>
+
 
                     <div className="card" style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '12px', borderRadius: '16px' }}>
                         <button onClick={() => { setMonth(month === 1 ? 12 : month - 1); if (month === 1) setYear(year - 1); }}

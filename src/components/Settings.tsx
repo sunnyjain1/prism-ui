@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 const Settings: React.FC = () => {
     const { user } = useAuth();
     const [darkMode, setDarkMode] = useState(document.documentElement.getAttribute('data-theme') === 'dark');
-    const [currency, setCurrency] = useState(localStorage.getItem('dashboardCurrency') || 'USD');
+    const [currency, setCurrency] = useState(localStorage.getItem('dashboardCurrency') || 'INR');
 
     const toggleTheme = () => {
         const newTheme = !darkMode ? 'dark' : 'light';
