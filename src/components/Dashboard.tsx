@@ -21,7 +21,7 @@ const Dashboard: React.FC = () => {
     const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 });
     const [month, setMonth] = useState(new Date().getMonth() + 1);
     const [year, setYear] = useState(new Date().getFullYear());
-    const [displayCurrency, setDisplayCurrency] = useState(localStorage.getItem('dashboardCurrency') || 'USD');
+    const [displayCurrency, setDisplayCurrency] = useState(localStorage.getItem('dashboardCurrency') || 'INR');
 
     // Filters
     const [chartType, setChartType] = useState<'income' | 'expense'>('expense');

@@ -6,6 +6,7 @@ import { Upload, FileText, BarChart, CheckCircle2, AlertCircle, Loader2, Chevron
 const BulkUpload: React.FC = () => {
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [selectedAccount, setSelectedAccount] = useState('');
+    const [currency, setCurrency] = useState('INR');
     const [sourceType, setSourceType] = useState('money_manager');
     const [file, setFile] = useState<File | null>(null);
     const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
@@ -25,6 +26,7 @@ const BulkUpload: React.FC = () => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('source_type', sourceType);
+        formData.append('currency', currency);
         if (selectedAccount) formData.append('account_id', selectedAccount);
 
         try {
@@ -84,7 +86,25 @@ const BulkUpload: React.FC = () => {
                     </div>
 
                     <div style={{ marginBottom: '24px' }}>
-                        <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>2. Target Account (Optional)</label>
+                        <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>2. Currency</label>
+                        <div style={{ position: 'relative' }}>
+                            <select
+                                value={currency}
+                                onChange={(e) => setCurrency(e.target.value)}
+                                style={{
+                                    width: '100%', padding: '12px', paddingRight: '40px', borderRadius: '12px',
+                                    border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'inherit',
+                                    appearance: 'none', WebkitAppearance: 'none'
+                                }}
+                            >
+                                {['INR', 'USD', 'EUR', 'GBP'].map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <ChevronDown size={20} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }} />
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>3. Target Account (Optional)</label>
                         <div style={{ position: 'relative' }}>
                             <select
                                 value={selectedAccount}
@@ -103,7 +123,7 @@ const BulkUpload: React.FC = () => {
                     </div>
 
                     <div style={{ marginBottom: '32px' }}>
-                        <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>3. Upload File</label>
+                        <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>4. Upload File</label>
                         <div style={{
                             border: '2px dashed var(--border)', borderRadius: '20px', padding: '40px', textAlign: 'center',
                             cursor: 'pointer', background: file ? 'rgba(16, 185, 129, 0.05)' : 'transparent',
