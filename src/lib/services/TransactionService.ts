@@ -61,7 +61,10 @@ export class TransactionService {
     }
 
     async exportTransactions(): Promise<void> {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/transactions/export`);
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/transactions/export`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (!response.ok) throw new Error('Failed to export transactions');
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -76,8 +79,10 @@ export class TransactionService {
     async importTransactions(file: File): Promise<any> {
         const formData = new FormData();
         formData.append('file', file);
+        const token = localStorage.getItem('token');
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/transactions/import`, {
             method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
         if (!response.ok) throw new Error('Failed to import transactions');

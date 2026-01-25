@@ -32,7 +32,7 @@ const BulkUpload: React.FC = () => {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('prism_token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
 
