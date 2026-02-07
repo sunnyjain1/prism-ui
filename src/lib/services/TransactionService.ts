@@ -1,5 +1,7 @@
+/// <reference types="vite/client" />
 import type { IRepository } from '../core/interfaces';
 import type { Transaction, Account } from '../core/models';
+import { RemoteRepository } from '../repositories/RemoteRepository';
 
 export class TransactionService {
     private repository: IRepository<Transaction>;
@@ -26,11 +28,23 @@ export class TransactionService {
     }
 
     async getHistory(months: number = 6): Promise<{ month: string, income: number, expense: number }[]> {
-        const response = await fetch(`${this.repository['url']}/history?months=${months}`, {
-            headers: this.repository['getHeaders']()
+        const repo = this.repository as RemoteRepository<Transaction>;
+        const response = await fetch(`${repo.url}/history?months=${months}`, {
+            headers: repo.getHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch history');
         return response.json();
+    }
+
+    async getMonthSummary(month: number, year: number): Promise<{ income: number, expense: number, balance: number }> {
+        const txs = await this.getTransactionsByMonth(month, year);
+        let income = 0;
+        let expense = 0;
+        txs.forEach(t => {
+            if (t.type === 'income') income += t.amount;
+            else if (t.type === 'expense') expense += t.amount;
+        });
+        return { income, expense, balance: income - expense };
     }
 
     async getTransactions(params: { month?: number; year?: number; start_date?: string; end_date?: string; search?: string; category_ids?: string[]; account_id?: string }): Promise<Transaction[]> {

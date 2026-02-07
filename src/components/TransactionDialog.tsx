@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { transactionService, accountService, categoryService } from '../lib/services/context';
-import type { Account, Category } from '../lib/core/models';
+import type { Transaction, Account, Category } from '../lib/core/models';
 import { X, ArrowRightLeft, CheckCircle2, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,7 +12,7 @@ interface Props {
 
 const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'JPY'];
 
-const TransactionDialog: React.FC<Props> = ({ onClose, initialAccountId }) => {
+const TransactionDialog: React.FC<Props> = ({ onClose }) => {
     const [type, setType] = useState<'income' | 'expense' | 'transfer'>('expense');
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -80,16 +80,18 @@ const TransactionDialog: React.FC<Props> = ({ onClose, initialAccountId }) => {
                 amt = transactionService.convert(amt, formData.currency, account.currency);
             }
 
-            await transactionService.addTransaction({
+            const transactionData: Omit<Transaction, 'id' | 'timestamp'> = {
                 amount: amt,
-                type,
+                type: type,
                 description: formData.description || (type === 'transfer' ? 'Internal Transfer' : ''),
                 notes: formData.notes,
                 date: new Date(formData.date).toISOString(),
                 account_id: formData.account_id,
-                category_id: type !== 'transfer' ? formData.category_id : undefined,
-                destination_account_id: type === 'transfer' ? formData.destination_account_id : undefined,
-            } as any);
+                category_id: type !== 'transfer' ? formData.category_id || undefined : undefined,
+                destination_account_id: type === 'transfer' ? formData.destination_account_id || undefined : undefined,
+            };
+
+            await transactionService.addTransaction(transactionData);
 
             setSuccess(true);
             window.dispatchEvent(new CustomEvent('transaction-added'));

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { accountService } from '../lib/services/context';
 import type { Account } from '../lib/core/models';
-import { Upload, FileText, BarChart, CheckCircle2, AlertCircle, Loader2, ChevronDown, Building2, CreditCard, X } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, ChevronDown, Building2, CreditCard, X } from 'lucide-react';
 
 interface SupportedFormat {
     name: string;
@@ -110,7 +110,7 @@ const BulkUpload: React.FC = () => {
                         <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>
                             1. Select Data Source {autoDetect && <span style={{ color: 'var(--text-muted)', fontWeight: '400', fontSize: '14px' }}>(Auto-detect enabled)</span>}
                         </label>
-                        
+
                         {!autoDetect && (
                             <div style={{ marginBottom: '16px' }}>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '14px' }}>

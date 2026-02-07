@@ -207,7 +207,7 @@ const Dashboard: React.FC = () => {
                             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
                             <Tooltip
                                 contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                                formatter={(val: number) => formatCurrency(val, displayCurrency)}
+                                formatter={(val: number | undefined) => val !== undefined ? formatCurrency(val, displayCurrency) : ''}
                             />
                             <Legend />
                             <Bar dataKey="income" name="Income" fill="var(--income)" radius={[4, 4, 0, 0]} />

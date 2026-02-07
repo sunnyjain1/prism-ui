@@ -3,10 +3,10 @@ import { transactionService, accountService, categoryService } from '../lib/serv
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../lib/utils/formatters';
 import type { Transaction, Account, Category } from '../lib/core/models';
-import { ArrowUpRight, ArrowDownRight, Search, Calendar, Edit2, X, Trash2, Download, ChevronDown, Check, Plus } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Search, Edit2, Trash2, Download, ChevronDown, Check, Plus } from 'lucide-react';
 
 const Transactions: React.FC = () => {
-    const { user } = useAuth();
+    const { } = useAuth();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
