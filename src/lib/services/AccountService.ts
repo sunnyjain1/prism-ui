@@ -27,4 +27,8 @@ export class AccountService {
     async getAccount(id: string): Promise<Account | null> {
         return this.repository.findById(id);
     }
+
+    async deleteAccount(id: string): Promise<void> {
+        return this.repository.delete(id);
+    }
 }

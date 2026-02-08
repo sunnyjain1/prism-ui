@@ -44,6 +44,18 @@ const Accounts: React.FC = () => {
         }
     };
 
+    const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
+        e.stopPropagation();
+        if (confirm(`Are you sure you want to delete the account "${name}"? This will also affect associated transactions.`)) {
+            try {
+                await accountService.deleteAccount(id);
+                loadAccounts();
+            } catch (e) {
+                console.error('Failed to delete account', e);
+            }
+        }
+    };
+
     const getIcon = (type: Account['type']) => {
         switch (type) {
             case 'credit': return <CreditCard size={20} />;
@@ -175,8 +187,31 @@ const Accounts: React.FC = () => {
                                 <div style={{ padding: '10px', borderRadius: '12px', background: 'var(--bg-main)', color: 'var(--primary)' }}>
                                     {getIcon(account.type)}
                                 </div>
-                                <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    {account.type}
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        {account.type}
+                                    </div>
+                                    <button
+                                        onClick={(e) => handleDelete(e, account.id, account.name)}
+                                        disabled={user?.role === 'viewer'}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: 'var(--expense)',
+                                            padding: '4px',
+                                            cursor: user?.role === 'viewer' ? 'not-allowed' : 'pointer',
+                                            opacity: user?.role === 'viewer' ? 0.3 : 0.6,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            transition: 'opacity 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+                                        title="Delete Account"
+                                    >
+                                        <Plus size={18} style={{ transform: 'rotate(45deg)' }} />
+                                    </button>
                                 </div>
                             </div>
 
