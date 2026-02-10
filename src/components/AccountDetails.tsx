@@ -12,6 +12,7 @@ const AccountDetails: React.FC = () => {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [displayCurrency, setDisplayCurrency] = useState(localStorage.getItem('dashboardCurrency') || 'INR');
 
     useEffect(() => {
         if (!id) return;
@@ -44,9 +45,14 @@ const AccountDetails: React.FC = () => {
         loadData();
 
         const handleUpdate = () => loadData();
+        const handleCurrency = (e: any) => setDisplayCurrency(e.detail);
         window.addEventListener('transaction-added', handleUpdate);
-        return () => window.removeEventListener('transaction-added', handleUpdate);
-    }, [id, currentDate]); // re-fetch when date changes
+        window.addEventListener('currency-changed', handleCurrency);
+        return () => {
+            window.removeEventListener('transaction-added', handleUpdate);
+            window.removeEventListener('currency-changed', handleCurrency);
+        };
+    }, [id, currentDate, displayCurrency]); // re-fetch when date or currency changes (though currency only affects display)
 
     const handleAddTransaction = () => {
         window.dispatchEvent(new CustomEvent('open-transaction-dialog', {
@@ -99,8 +105,15 @@ const AccountDetails: React.FC = () => {
                         <h1 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '8px' }}>
                             {account.name}
                         </h1>
-                        <div style={{ fontSize: '24px', fontWeight: '600', color: account.balance < 0 ? 'var(--expense)' : 'var(--text-main)' }}>
-                            {formatCurrency(account.balance, account.currency)}
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                            <div style={{ fontSize: '24px', fontWeight: '600', color: account.balance < 0 ? 'var(--expense)' : 'var(--text-main)' }}>
+                                {formatCurrency(account.balance, account.currency)}
+                            </div>
+                            {account.currency !== displayCurrency && (
+                                <div style={{ fontSize: '16px', color: 'var(--text-muted)' }}>
+                                    ≈ {formatCurrency(transactionService.convert(account.balance, account.currency, displayCurrency), displayCurrency)}
+                                </div>
+                            )}
                         </div>
                     </div>
                     <button
@@ -178,6 +191,11 @@ const AccountDetails: React.FC = () => {
                                     <div style={{ fontWeight: '600', color: tx.type === 'income' ? 'var(--income)' : 'var(--text-main)' }}>
                                         {tx.type === 'expense' ? '-' : '+'}{formatCurrency(tx.amount, account.currency)}
                                     </div>
+                                    {account.currency !== displayCurrency && (
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                            {tx.type === 'expense' ? '-' : '+'}{formatCurrency(transactionService.convert(tx.amount, account.currency, displayCurrency), displayCurrency)}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}

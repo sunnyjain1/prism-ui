@@ -22,6 +22,19 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
         return headers;
     }
 
+    private async handleResponse(response: Response) {
+        if (response.status === 401) {
+            console.error('Session expired (401). Triggering logout.');
+            window.dispatchEvent(new CustomEvent('unauthorized'));
+            throw new Error('Unauthorized');
+        }
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+            throw new Error(error.detail || 'Request failed');
+        }
+        return response.json();
+    }
+
     async create(item: T): Promise<T> {
         const response = await fetch(this.url, {
             method: 'POST',
@@ -29,8 +42,7 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
             body: JSON.stringify(item),
         });
 
-        if (!response.ok) throw new Error('Failed to create item');
-        return response.json();
+        return this.handleResponse(response);
     }
 
     async findAll(params?: any): Promise<T[]> {
@@ -52,8 +64,7 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
             headers: this.getHeaders()
         });
 
-        if (!response.ok) throw new Error('Failed to fetch items');
-        return response.json();
+        return this.handleResponse(response);
     }
 
     async findById(id: string): Promise<T | null> {
@@ -62,8 +73,7 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
         });
 
         if (response.status === 404) return null;
-        if (!response.ok) throw new Error('Failed to fetch item');
-        return response.json();
+        return this.handleResponse(response);
     }
 
     async update(id: string, item: Partial<T>): Promise<T> {
@@ -73,8 +83,7 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
             body: JSON.stringify(item),
         });
 
-        if (!response.ok) throw new Error('Failed to update item');
-        return response.json();
+        return this.handleResponse(response);
     }
 
     async delete(id: string): Promise<void> {
@@ -83,6 +92,10 @@ export class RemoteRepository<T extends Entity> implements IRepository<T> {
             headers: this.getHeaders(),
         });
 
+        if (response.status === 401) {
+            window.dispatchEvent(new CustomEvent('unauthorized'));
+            throw new Error('Unauthorized');
+        }
         if (!response.ok) throw new Error('Failed to delete item');
     }
 }

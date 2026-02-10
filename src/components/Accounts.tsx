@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { accountService } from '../lib/services/context';
+import { accountService, transactionService } from '../lib/services/context';
 import type { Account } from '../lib/core/models';
 import { CreditCard, Landmark, Banknote, TrendingUp, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency } from '../lib/utils/formatters';
 
 
 const Accounts: React.FC = () => {
@@ -14,6 +15,7 @@ const Accounts: React.FC = () => {
     const [newType, setNewType] = useState<Account['type']>('checking');
     const [newCurrency, setNewCurrency] = useState('USD');
     const [limit, setLimit] = useState('');
+    const [displayCurrency, setDisplayCurrency] = useState(localStorage.getItem('dashboardCurrency') || 'INR');
     const { user } = useAuth();
 
 
@@ -28,6 +30,9 @@ const Accounts: React.FC = () => {
 
     useEffect(() => {
         loadAccounts();
+        const handleCurrency = (e: any) => setDisplayCurrency(e.detail);
+        window.addEventListener('currency-changed', handleCurrency);
+        return () => window.removeEventListener('currency-changed', handleCurrency);
     }, []);
 
     const handleCreate = async (e: React.FormEvent) => {
@@ -227,9 +232,14 @@ const Accounts: React.FC = () => {
                             <div style={{ marginTop: 'auto' }}>
                                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Current Balance</div>
                                 <div style={{ fontSize: '24px', fontWeight: '800', color: account.balance < 0 && !isCredit ? 'var(--expense)' : 'var(--text-main)' }}>
-                                    {getCurrencySymbol(account.currency)}{Math.abs(account.balance).toLocaleString()}
+                                    {formatCurrency(account.balance, account.currency)}
                                     {account.balance < 0 && !isCredit && <span style={{ fontSize: '14px', fontWeight: '500', marginLeft: '4px' }}>(Overdrawn)</span>}
                                 </div>
+                                {account.currency !== displayCurrency && (
+                                    <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                        ≈ {formatCurrency(transactionService.convert(account.balance, account.currency, displayCurrency), displayCurrency)}
+                                    </div>
+                                )}
                             </div>
 
                             {isCredit && (

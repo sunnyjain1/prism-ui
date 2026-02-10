@@ -27,9 +27,13 @@ export class TransactionService {
         return this.repository.findAll({ limit });
     }
 
-    async getHistory(months: number = 6): Promise<{ month: string, income: number, expense: number }[]> {
+    async getHistory(months: number = 6, month?: number, year?: number): Promise<{ month: string, income: number, expense: number }[]> {
         const repo = this.repository as RemoteRepository<Transaction>;
-        const response = await fetch(`${repo.url}/history?months=${months}`, {
+        const params = new URLSearchParams({ months: months.toString() });
+        if (month) params.append('month', month.toString());
+        if (year) params.append('year', year.toString());
+
+        const response = await fetch(`${repo.url}/history?${params.toString()}`, {
             headers: repo.getHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch history');
@@ -47,7 +51,7 @@ export class TransactionService {
         return { income, expense, balance: income - expense };
     }
 
-    async getTransactions(params: { month?: number; year?: number; start_date?: string; end_date?: string; search?: string; category_ids?: string[]; account_id?: string }): Promise<Transaction[]> {
+    async getTransactions(params: { month?: number; year?: number; start_date?: string; end_date?: string; search?: string; category_ids?: string[]; account_id?: string; limit?: number; skip?: number }): Promise<Transaction[]> {
         return this.repository.findAll(params);
     }
 

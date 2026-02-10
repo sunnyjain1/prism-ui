@@ -28,6 +28,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(JSON.parse(savedUser));
         }
         setIsLoading(false);
+
+        const handleUnauthorized = () => {
+            logout();
+        };
+
+        window.addEventListener('unauthorized', handleUnauthorized);
+        return () => window.removeEventListener('unauthorized', handleUnauthorized);
     }, [token]);
 
     const login = (newToken: string, newUser: User) => {
