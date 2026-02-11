@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { format, setMonth, setYear, startOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

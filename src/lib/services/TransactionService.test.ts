@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TransactionService } from './TransactionService';
-import type { Transaction, Account } from '../core/models';
 
 describe('TransactionService', () => {
     let service: TransactionService;
