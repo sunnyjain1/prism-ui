@@ -27,5 +27,7 @@ export interface Account extends Entity {
     balance: number;
     billing_cycle_day: number;
     credit_limit?: number;
+    monthly_income: number;
+    monthly_expense: number;
 }
 

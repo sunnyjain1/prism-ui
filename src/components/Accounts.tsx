@@ -71,12 +71,6 @@ const Accounts: React.FC = () => {
         }
     };
 
-    const getCurrencySymbol = (code: string) => {
-        switch (code) {
-            case 'USD': return '$'; case 'EUR': return '€'; case 'GBP': return '£';
-            case 'INR': return '₹'; case 'JPY': return '¥'; default: return code + ' ';
-        }
-    };
 
     return (
         <div className="accounts">
@@ -268,13 +262,13 @@ const Accounts: React.FC = () => {
                                     <div style={{ flex: 1, padding: '8px', borderRadius: '10px', background: 'var(--bg-main)', textAlign: 'center' }}>
                                         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>This Month</div>
                                         <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--income)' }}>
-                                            {getCurrencySymbol(account.currency)}0
+                                            {formatCurrency(account.monthly_income, account.currency)}
                                         </div>
                                     </div>
                                     <div style={{ flex: 1, padding: '8px', borderRadius: '10px', background: 'var(--bg-main)', textAlign: 'center' }}>
                                         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>Expenses</div>
                                         <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--expense)' }}>
-                                            {getCurrencySymbol(account.currency)}0
+                                            {formatCurrency(account.monthly_expense, account.currency)}
                                         </div>
                                     </div>
                                 </div>

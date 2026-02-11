@@ -16,6 +16,8 @@ export class AccountService {
             currency,
             balance: 0,
             billing_cycle_day: 1,
+            monthly_income: 0,
+            monthly_expense: 0,
         };
         return this.repository.create(newAccount);
     }
