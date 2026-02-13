@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User as UserIcon, UserPlus, Loader2 } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
+import { useAuth } from '../contexts/AuthContext';
 
 const Register: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -9,6 +11,7 @@ const Register: React.FC = () => {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const { login } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -39,6 +42,29 @@ const Register: React.FC = () => {
             setError(err.message);
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse: any) => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: credentialResponse.credential }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Google sign-up failed');
+            }
+
+            const { access_token } = await response.json();
+            const userRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${access_token}` }
+            });
+            const userData = await userRes.json();
+            login(access_token, userData);
+        } catch (err: any) {
+            setError(err.message || 'Google sign-up failed');
         }
     };
 
@@ -157,6 +183,45 @@ const Register: React.FC = () => {
                                 )}
                             </button>
                         </form>
+
+                        <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '12px' }}>
+                                <div style={{ height: '1px', flex: 1, background: 'var(--border)' }}></div>
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>OR</span>
+                                <div style={{ height: '1px', flex: 1, background: 'var(--border)' }}></div>
+                            </div>
+
+                            <GoogleLogin
+                                onSuccess={handleGoogleSuccess}
+                                onError={() => setError('Google Sign-Up Failed')}
+                                theme="filled_black"
+                                shape="circle"
+                                text="signup_with"
+                            />
+
+                            {/* Developer Mock Auth Button */}
+                            {import.meta.env.DEV && (
+                                <button
+                                    onClick={() => handleGoogleSuccess({ credential: 'dev-token-prism' })}
+                                    style={{
+                                        marginTop: '4px',
+                                        background: 'transparent',
+                                        border: '1px dashed var(--primary)',
+                                        color: 'var(--primary)',
+                                        padding: '8px 16px',
+                                        borderRadius: '20px',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                        opacity: 0.6,
+                                        transition: 'opacity 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                                    onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+                                >
+                                    Dev Mock Sign-Up
+                                </button>
+                            )}
+                        </div>
 
                         <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', color: 'var(--text-muted)' }}>
                             Already have an account? <span

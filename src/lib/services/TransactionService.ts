@@ -2,6 +2,9 @@
 import type { IRepository } from '../core/interfaces';
 import type { Transaction, Account } from '../core/models';
 import { RemoteRepository } from '../repositories/RemoteRepository';
+import { encryptionService } from './EncryptionService';
+
+const TX_PII_FIELDS = ['description', 'merchant', 'notes'];
 
 export class TransactionService {
     private repository: IRepository<Transaction>;
@@ -15,16 +18,19 @@ export class TransactionService {
     }
 
     async addTransaction(transaction: Omit<Transaction, 'id' | 'timestamp'>): Promise<Transaction> {
-        const newTransaction: Transaction = {
+        let newTransaction: Transaction = {
             ...transaction,
             id: crypto.randomUUID(),
             timestamp: Date.now(),
         };
-        return this.repository.create(newTransaction);
+        newTransaction = await encryptionService.encryptPII(newTransaction, TX_PII_FIELDS);
+        const result = await this.repository.create(newTransaction);
+        return encryptionService.decryptPII(result, TX_PII_FIELDS);
     }
 
     async getRecentTransactions(limit: number = 20): Promise<Transaction[]> {
-        return this.repository.findAll({ limit });
+        const txs = await this.repository.findAll({ limit });
+        return encryptionService.decryptBatch(txs, TX_PII_FIELDS);
     }
 
     async getHistory(months: number = 6, month?: number, year?: number): Promise<{ month: string, income: number, expense: number }[]> {
@@ -52,7 +58,8 @@ export class TransactionService {
     }
 
     async getTransactions(params: { month?: number; year?: number; start_date?: string; end_date?: string; search?: string; category_ids?: string[]; account_id?: string; limit?: number; skip?: number }): Promise<Transaction[]> {
-        return this.repository.findAll(params);
+        const txs = await this.repository.findAll(params);
+        return encryptionService.decryptBatch(txs, TX_PII_FIELDS);
     }
 
     async getTransactionsByMonth(month: number, year: number): Promise<Transaction[]> {
@@ -60,7 +67,9 @@ export class TransactionService {
     }
 
     async updateTransaction(id: string, transaction: Partial<Transaction>): Promise<Transaction> {
-        return this.repository.update(id, transaction);
+        const encrypted = await encryptionService.encryptPII(transaction as Record<string, any>, TX_PII_FIELDS);
+        const result = await this.repository.update(id, encrypted);
+        return encryptionService.decryptPII(result, TX_PII_FIELDS);
     }
 
     async deleteTransaction(id: string): Promise<void> {

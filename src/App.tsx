@@ -8,17 +8,19 @@ import Reports from './components/Reports';
 import Settings from './components/Settings';
 import Login from './components/Login';
 import Register from './components/Register';
+import LandingPage from './components/LandingPage';
 import TransactionDialog from './components/TransactionDialog';
 import BulkUpload from './components/BulkUpload';
 import Transactions from './components/Transactions';
 import AccountDetails from './components/AccountDetails';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { CryptoProvider } from './contexts/CryptoContext';
 import { Plus, Loader2 } from 'lucide-react';
 
 const AuthController: React.FC = () => {
     const { token, isLoading } = useAuth();
     const location = useLocation();
-    const [authView, setAuthView] = useState<'login' | 'register'>('login');
+    const [authView, setAuthView] = useState<'landing' | 'login' | 'register'>('landing');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [dialogProps, setDialogProps] = useState<{ accountId?: string }>({});
     const [isFabHovered, setIsFabHovered] = useState(false);
@@ -48,7 +50,14 @@ const AuthController: React.FC = () => {
     }
 
     if (!token) {
-        return authView === 'login' ? <Login /> : <Register />;
+        if (authView === 'login') return <Login />;
+        if (authView === 'register') return <Register />;
+        return (
+            <LandingPage
+                onGetStarted={() => setAuthView('register')}
+                onLogin={() => setAuthView('login')}
+            />
+        );
     }
 
 
@@ -123,9 +132,11 @@ const AuthController: React.FC = () => {
 const App: React.FC = () => {
     return (
         <Router>
-            <AuthProvider>
-                <AuthController />
-            </AuthProvider>
+            <CryptoProvider>
+                <AuthProvider>
+                    <AuthController />
+                </AuthProvider>
+            </CryptoProvider>
         </Router>
     );
 };

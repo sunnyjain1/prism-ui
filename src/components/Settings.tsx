@@ -1,7 +1,100 @@
 import React, { useState } from 'react';
-import { Sun, Moon, Globe, Shield, User, Download, ExternalLink } from 'lucide-react';
+import { Sun, Moon, Globe, Shield, User, Download, Lock, Unlock, Key } from 'lucide-react';
 import { transactionService } from '../lib/services/context';
 import { useAuth } from '../contexts/AuthContext';
+import { useCrypto } from '../contexts/CryptoContext';
+
+const MasterKeySection: React.FC = () => {
+    const { isUnlocked, isSetup, unlock, lock } = useCrypto();
+    const [masterKey, setMasterKey] = useState('');
+    const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+    const handleUnlock = async () => {
+        if (!masterKey.trim()) return;
+        setStatus('loading');
+        const success = await unlock(masterKey);
+        setStatus(success ? 'success' : 'error');
+        if (success) setMasterKey('');
+        setTimeout(() => setStatus('idle'), 2000);
+    };
+
+    if (isUnlocked) {
+        return (
+            <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div>
+                        <div style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Unlock size={16} color="var(--income)" /> Encryption Active
+                        </div>
+                        <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            PII fields (descriptions, notes, account names) are being encrypted.
+                        </div>
+                    </div>
+                    <button
+                        onClick={lock}
+                        className="btn"
+                        style={{ border: '1px solid var(--border)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                        <Lock size={14} /> Lock
+                    </button>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-main)', padding: '10px 14px', borderRadius: '8px' }}>
+                    Your data is encrypted client-side. The server only sees ciphertext for sensitive fields.
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div>
+            <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontWeight: '600' }}>Master Key</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    {isSetup
+                        ? 'Enter your Master Key to decrypt your data for this session.'
+                        : 'Set a Master Key to encrypt sensitive data (descriptions, notes, account names). This key never leaves your browser.'}
+                </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                    <Key size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                        type="password"
+                        placeholder={isSetup ? 'Enter Master Key...' : 'Choose a Master Key...'}
+                        value={masterKey}
+                        onChange={(e) => setMasterKey(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+                        style={{
+                            width: '100%', padding: '10px 10px 10px 36px', borderRadius: '10px',
+                            border: '1px solid var(--border)', background: 'var(--bg-main)',
+                            color: 'var(--text-main)', fontSize: '14px'
+                        }}
+                    />
+                </div>
+                <button
+                    onClick={handleUnlock}
+                    disabled={!masterKey.trim() || status === 'loading'}
+                    className="btn"
+                    style={{
+                        background: 'var(--primary)', color: 'white', padding: '10px 20px',
+                        borderRadius: '10px', fontWeight: '600', opacity: masterKey.trim() ? 1 : 0.5
+                    }}
+                >
+                    {status === 'loading' ? 'Unlocking...' : isSetup ? 'Unlock' : 'Enable'}
+                </button>
+            </div>
+            {status === 'success' && (
+                <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--income)' }}>✓ Encryption unlocked for this session.</div>
+            )}
+            {status === 'error' && (
+                <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--expense)' }}>Failed to initialize encryption.</div>
+            )}
+            <div style={{ marginTop: '16px', fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-main)', padding: '10px 14px', borderRadius: '8px' }}>
+                ⚠️ If you lose your Master Key, encrypted text fields cannot be recovered. Amounts, dates, and categories remain accessible.
+            </div>
+        </div>
+    );
+};
 
 const Settings: React.FC = () => {
     const { user } = useAuth();
@@ -137,15 +230,12 @@ const Settings: React.FC = () => {
                     </div>
                 </section>
 
-                {/* Security Section */}
-                <section className="card" style={{ border: '1px dashed var(--border)' }}>
-                    <h3 style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}>
-                        <Shield size={20} /> Privacy & Labs
+                {/* Privacy & Encryption Section */}
+                <section className="card">
+                    <h3 style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Shield size={20} /> Privacy & Encryption
                     </h3>
-                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>We are exploring privacy features like biometric lock and encrypted backups.</p>
-                    <a href="#" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: 'var(--primary)', marginTop: '16px', textDecoration: 'none' }}>
-                        Join Beta <ExternalLink size={14} />
-                    </a>
+                    <MasterKeySection />
                 </section>
             </div>
         </div>

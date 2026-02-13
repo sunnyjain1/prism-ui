@@ -1,5 +1,8 @@
 import type { IRepository } from '../core/interfaces';
 import type { Account } from '../core/models';
+import { encryptionService } from './EncryptionService';
+
+const ACCOUNT_PII_FIELDS = ['name'];
 
 export class AccountService {
     private repository: IRepository<Account>;
@@ -9,7 +12,7 @@ export class AccountService {
     }
 
     async createAccount(name: string, type: Account['type'], currency: string = 'USD'): Promise<Account> {
-        const newAccount: Account = {
+        let newAccount: Account = {
             id: crypto.randomUUID(),
             name,
             type,
@@ -19,15 +22,20 @@ export class AccountService {
             monthly_income: 0,
             monthly_expense: 0,
         };
-        return this.repository.create(newAccount);
+        newAccount = await encryptionService.encryptPII(newAccount, ACCOUNT_PII_FIELDS);
+        const result = await this.repository.create(newAccount);
+        return encryptionService.decryptPII(result, ACCOUNT_PII_FIELDS);
     }
 
     async getAccounts(): Promise<Account[]> {
-        return this.repository.findAll();
+        const accounts = await this.repository.findAll();
+        return encryptionService.decryptBatch(accounts, ACCOUNT_PII_FIELDS);
     }
 
     async getAccount(id: string): Promise<Account | null> {
-        return this.repository.findById(id);
+        const account = await this.repository.findById(id);
+        if (!account) return null;
+        return encryptionService.decryptPII(account, ACCOUNT_PII_FIELDS);
     }
 
     async deleteAccount(id: string): Promise<void> {
