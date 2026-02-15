@@ -8,7 +8,7 @@ import type { Transaction, Account } from '../lib/core/models';
 import {
     ArrowUpRight, ArrowDownRight,
     BarChart3, TrendingUp, Download, Upload,
-    Loader2, ArrowRight
+    Loader2, ArrowRight, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DatePicker from './DatePicker';
@@ -16,6 +16,7 @@ import DatePicker from './DatePicker';
 const Dashboard: React.FC = () => {
     const { user } = useAuth();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [fullTxs, setFullTxs] = useState<Transaction[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 });
     const [month, setMonth] = useState(new Date().getMonth() + 1);
@@ -28,19 +29,39 @@ const Dashboard: React.FC = () => {
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const loader = useRef(null);
 
+    const handlePrevMonth = () => {
+        if (month === 1) {
+            setMonth(12);
+            setYear(year - 1);
+        } else {
+            setMonth(month - 1);
+        }
+    };
+
+    const handleNextMonth = () => {
+        if (month === 12) {
+            setMonth(1);
+            setYear(year + 1);
+        } else {
+            setMonth(month + 1);
+        }
+    };
+
     const loadInitialData = async () => {
         try {
-            const [txs, accs] = await Promise.all([
-                transactionService.getTransactions({ month, year, limit: 20, skip: 0 }),
+            const [rawSummary, allTxs, accs] = await Promise.all([
+                transactionService.getRawSummary(month, year),
+                transactionService.getTransactionsByMonth(month, year),
                 accountService.getAccounts()
             ]);
 
-            setTransactions(txs);
+            setFullTxs(allTxs);
+            setTransactions(allTxs.slice(0, 20));
             setAccounts(accs);
             setPage(1);
-            setHasMore(txs.length === 20);
+            setHasMore(allTxs.length > 20);
 
-            const newSummary = transactionService.calculateSummary(txs, accs, displayCurrency);
+            const newSummary = transactionService.calculateSummaryFromRaw(rawSummary, displayCurrency);
             setSummary(newSummary);
         } catch (e) {
             console.error('Failed to load dashboard data', e);
@@ -51,18 +72,20 @@ const Dashboard: React.FC = () => {
         if (isLoadingMore || !hasMore) return;
         setIsLoadingMore(true);
         try {
-            const skip = page * 20;
-            const moreTxs = await transactionService.getTransactions({ month, year, limit: 20, skip });
-
-            if (moreTxs.length < 20) setHasMore(false);
-            setTransactions(prev => [...prev, ...moreTxs]);
-            setPage(prev => prev + 1);
+            const nextBatch = fullTxs.slice(page * 20, (page + 1) * 20);
+            if (nextBatch.length > 0) {
+                setTransactions(prev => [...prev, ...nextBatch]);
+                setPage(prev => prev + 1);
+            }
+            if ((page + 1) * 20 >= fullTxs.length) {
+                setHasMore(false);
+            }
         } catch (e) {
             console.error('Failed to load more transactions', e);
         } finally {
             setIsLoadingMore(false);
         }
-    }, [page, hasMore, isLoadingMore, month, year]);
+    }, [page, hasMore, isLoadingMore, fullTxs]);
 
     useEffect(() => {
         const option = {
@@ -119,6 +142,81 @@ const Dashboard: React.FC = () => {
     // Optimization: we could have a specific summary endpoint. For now, it calculates on current visible + any more loaded.
 
 
+    const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+
+    // Group transactions by date and calculate daily aggregates (using FULL mesh data for accuracy)
+    const dailyData = fullTxs.reduce((groups: any[], t) => {
+        const dateStr = new Date(t.date).toDateString();
+        let group = groups.find(g => g.date === dateStr);
+
+        const account = accounts.find(a => a.id === t.account_id);
+        const amt = transactionService.convert(t.amount, account?.currency || 'INR', displayCurrency);
+
+        if (!group) {
+            group = { date: dateStr, transactions: [], income: 0, expense: 0 };
+            groups.push(group);
+        }
+
+        // Only include in 'transactions' property of group if we want all transactions in group
+        // But the Daily Activity list below uses the paginated 'transactions' state for performance.
+        // However, the group headers (sticky) should use the full summary.
+        group.transactions.push({ ...t, convertedAmount: amt });
+        if (t.type === 'income') group.income += amt;
+        else if (t.type === 'expense') group.expense += amt;
+
+        return groups;
+    }, []);
+
+    // Calculate Weekly Aggregates
+    const weeklyData = dailyData.reduce((weeks: any[], day) => {
+        const date = new Date(day.date);
+        const dayOfMonth = date.getDate();
+        const weekNum = Math.ceil(dayOfMonth / 7);
+
+        let week = weeks.find(w => w.weekNum === weekNum);
+        if (!week) {
+            const startDay = (weekNum - 1) * 7 + 1;
+            const endDay = Math.min(new Date(year, month, 0).getDate(), weekNum * 7);
+            week = {
+                weekNum,
+                range: `${month}/${startDay} - ${month}/${endDay}`,
+                income: 0,
+                expense: 0,
+                transactionCount: 0
+            };
+            weeks.push(week);
+        }
+
+        week.income += day.income;
+        week.expense += day.expense;
+        week.transactionCount += day.transactions.length;
+
+        return weeks;
+    }, []).sort((a: any, b: any) => b.weekNum - a.weekNum);
+
+    // Calculate Calendar Data (Monthly)
+    const renderCalendar = () => {
+        const firstDay = new Date(year, month - 1, 1).getDay();
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const calendarDays = [];
+
+        for (let i = 0; i < firstDay; i++) {
+            calendarDays.push({ padding: true });
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = new Date(year, month - 1, d).toDateString();
+            const dayInfo = dailyData.find(g => g.date === dateStr) || { income: 0, expense: 0 };
+            calendarDays.push({
+                day: d,
+                ...dayInfo,
+                padding: false
+            });
+        }
+
+        return calendarDays;
+    };
+
     return (
         <div className="dashboard">
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
@@ -130,11 +228,71 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <DatePicker
-                        month={month}
-                        year={year}
-                        onChange={(m, y) => { setMonth(m); setYear(y); }}
-                    />
+                    <div style={{
+                        display: 'flex',
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border-soft)',
+                        borderRadius: '12px',
+                        padding: '4px',
+                        gap: '2px'
+                    }}>
+                        {(['daily', 'weekly', 'monthly'] as const).map(m => (
+                            <button
+                                key={m}
+                                onClick={() => setViewMode(m)}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    background: viewMode === m ? 'var(--primary)' : 'transparent',
+                                    color: viewMode === m ? 'white' : 'var(--text-muted)',
+                                    transition: 'all 0.2s ease',
+                                    textTransform: 'capitalize'
+                                }}
+                            >
+                                {m}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button
+                            onClick={handlePrevMonth}
+                            style={{
+                                width: '32px', height: '32px', borderRadius: '8px',
+                                background: 'var(--bg-card)', border: '1px solid var(--border-soft)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: 'var(--text-muted)',
+                                transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-main)'; e.currentTarget.style.color = 'var(--primary)'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <DatePicker
+                            month={month}
+                            year={year}
+                            onChange={(m, y) => { setMonth(m); setYear(y); }}
+                        />
+                        <button
+                            onClick={handleNextMonth}
+                            style={{
+                                width: '32px', height: '32px', borderRadius: '8px',
+                                background: 'var(--bg-card)', border: '1px solid var(--border-soft)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: 'var(--text-muted)',
+                                transition: 'all 0.2s ease'
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-main)'; e.currentTarget.style.color = 'var(--primary)'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
 
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button className="btn" onClick={handleExport} style={{ width: '40px', height: '40px', padding: 0, borderRadius: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-soft)' }} title="Export CSV">
@@ -186,65 +344,182 @@ const Dashboard: React.FC = () => {
             <section>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
                     <div>
-                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '4px' }}>Recent Activity</h2>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Your categorized spending and income history.</p>
+                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '4px' }}>
+                            {viewMode === 'daily' ? 'Recent Activity' : viewMode === 'weekly' ? 'Weekly Summaries' : 'Monthly Highlights'}
+                        </h2>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+                            {viewMode === 'daily' ? 'Your categorized spending and income history.' :
+                                viewMode === 'weekly' ? 'Aggregated financial performance by week.' :
+                                    'Daily aggregates visualised on a calendar.'}
+                        </p>
                     </div>
                     <Link to="/transactions" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', fontWeight: '600', fontSize: '14px', textDecoration: 'none' }}>
                         Advanced Search <ArrowRight size={16} />
                     </Link>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <AnimatePresence mode="popLayout">
-                        {transactions.map((t, idx) => {
-                            const account = accounts.find(a => a.id === t.account_id);
-                            const amt = transactionService.convert(t.amount, account?.currency || 'USD', displayCurrency);
-                            return (
-                                <motion.div
-                                    key={t.id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    transition={{ duration: 0.2, delay: Math.min(idx * 0.05, 0.5) }}
-                                    className="transaction-row"
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '20px',
-                                        padding: '16px',
+                <div style={{ background: 'var(--bg-card)', borderRadius: '24px', border: '1px solid var(--border-soft)', padding: '24px', minHeight: '400px' }}>
+                    <AnimatePresence mode="wait">
+                        {viewMode === 'daily' && (
+                            <motion.div
+                                key="daily"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.2 }}
+                                style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
+                            >
+                                {fullTxs.length > 0 && dailyData.map((group, gIdx) => (
+                                    <div key={group.date}>
+                                        <div style={{
+                                            position: 'sticky',
+                                            top: '80px',
+                                            zIndex: 10,
+                                            background: 'rgba(255, 255, 255, 0.8)',
+                                            backdropFilter: 'blur(8px)',
+                                            padding: '8px 16px',
+                                            margin: '0 -16px 12px -16px',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            borderBottom: '1px solid var(--border-soft)'
+                                        }}>
+                                            <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-main)' }}>
+                                                {formatDate(group.date)}
+                                            </span>
+                                            <div style={{ display: 'flex', gap: '16px', fontSize: '13px', fontWeight: '600' }}>
+                                                {group.income > 0 && <span style={{ color: 'var(--income)' }}>+{formatCurrency(group.income, displayCurrency)}</span>}
+                                                {group.expense > 0 && <span style={{ color: 'var(--expense)' }}>-{formatCurrency(group.expense, displayCurrency)}</span>}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            {/* We only show transactions for this group that are in the paginated 'transactions' state */}
+                                            {transactions.filter(t => new Date(t.date).toDateString() === group.date).map((t: any, idx: number) => {
+                                                const account = accounts.find(a => a.id === t.account_id);
+                                                const convertedAmt = transactionService.convert(t.amount, account?.currency || 'INR', displayCurrency);
+                                                return (
+                                                    <motion.div
+                                                        key={t.id}
+                                                        initial={{ opacity: 0, x: -20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        exit={{ opacity: 0, scale: 0.95 }}
+                                                        transition={{ duration: 0.2, delay: Math.min((gIdx * 5 + idx) * 0.05, 0.5) }}
+                                                        className="transaction-row"
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '20px',
+                                                            padding: '16px',
+                                                            borderRadius: '16px',
+                                                            background: 'var(--bg-card)',
+                                                            border: '1px solid var(--border-soft)',
+                                                            transition: 'background 0.2s ease',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        whileHover={{ background: 'var(--bg-main)', transform: 'translateZ(0)' }}
+                                                    >
+                                                        <div style={{
+                                                            width: '48px', height: '48px', borderRadius: '14px',
+                                                            background: t.type === 'income' ? 'var(--income-soft)' : 'var(--expense-soft)',
+                                                            color: t.type === 'income' ? 'var(--income)' : 'var(--expense)',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                                        }}>
+                                                            {t.type === 'income' ? <ArrowUpRight size={24} /> : <ArrowDownRight size={24} />}
+                                                        </div>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '16px' }}>{t.description}</div>
+                                                            <div style={{ color: 'var(--primary)', fontWeight: '500' }}>{t.category?.name || 'General'}</div>
+                                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                {account?.name}
+                                                                {t.notes && <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'var(--bg-main)', borderRadius: '4px', fontSize: '11px', fontStyle: 'italic' }}>{t.notes}</span>}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ textAlign: 'right' }}>
+                                                            <div style={{ fontSize: '18px', fontWeight: '800', color: t.type === 'expense' ? 'var(--expense)' : 'var(--income)' }}>
+                                                                {t.type === 'expense' ? '-' : '+'}{formatCurrency(convertedAmt, displayCurrency)}
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </motion.div>
+                        )}
+
+                        {viewMode === 'weekly' && (
+                            <motion.div
+                                key="weekly"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.2 }}
+                                style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+                            >
+                                {weeklyData.map((week: any) => (
+                                    <div key={week.weekNum} style={{
+                                        padding: '20px',
                                         borderRadius: '16px',
-                                        background: 'var(--bg-card)',
+                                        background: 'var(--bg-main)',
                                         border: '1px solid var(--border-soft)',
-                                        transition: 'background 0.2s ease',
-                                        cursor: 'pointer'
-                                    }}
-                                    whileHover={{ background: 'var(--bg-main)', transform: 'translateZ(0)' }}
-                                >
-                                    <div style={{
-                                        width: '48px', height: '48px', borderRadius: '14px',
-                                        background: t.type === 'income' ? 'var(--income-soft)' : 'var(--expense-soft)',
-                                        color: t.type === 'income' ? 'var(--income)' : 'var(--expense)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
                                     }}>
-                                        {t.type === 'income' ? <ArrowUpRight size={24} /> : <ArrowDownRight size={24} />}
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '16px' }}>{t.description}</div>
-                                        <div style={{ color: 'var(--primary)', fontWeight: '500' }}>{t.category?.name || 'General'}</div>
-                                        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                            {formatDate(t.date)}
-                                            {t.notes && <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'var(--bg-main)', borderRadius: '4px', fontSize: '11px', fontStyle: 'italic' }}>{t.notes}</span>}
+                                        <div>
+                                            <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)' }}>Week {week.weekNum}</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{week.range} • {week.transactionCount} transactions</div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--income)', marginBottom: '2px' }}>
+                                                +{formatCurrency(week.income, displayCurrency)}
+                                            </div>
+                                            <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--expense)' }}>
+                                                -{formatCurrency(week.expense, displayCurrency)}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <div style={{ fontSize: '18px', fontWeight: '800', color: t.type === 'expense' ? 'var(--expense)' : 'var(--income)' }}>
-                                            {t.type === 'expense' ? '-' : '+'}{formatCurrency(amt, displayCurrency)}
+                                ))}
+                            </motion.div>
+                        )}
+
+                        {viewMode === 'monthly' && (
+                            <motion.div
+                                key="monthly"
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.98 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', background: 'var(--border-soft)', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-soft)' }}>
+                                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                                        <div key={d} style={{ background: 'var(--bg-main)', padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                            {d}
                                         </div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{account?.name}</div>
-                                    </div>
-                                </motion.div>
-                            )
-                        })}
+                                    ))}
+                                    {renderCalendar().map((day, i) => (
+                                        <div key={i} style={{
+                                            background: 'var(--bg-card)',
+                                            minHeight: '100px',
+                                            padding: '8px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'space-between',
+                                            opacity: day.padding ? 0.3 : 1
+                                        }}>
+                                            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)' }}>{day.day}</div>
+                                            {!day.padding && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+                                                    {day.income > 0 && <div style={{ color: 'var(--income)', fontSize: '11px', fontWeight: '800' }}>+{formatCurrency(day.income, displayCurrency).split('.')[0]}</div>}
+                                                    {day.expense > 0 && <div style={{ color: 'var(--expense)', fontSize: '11px', fontWeight: '800' }}>-{formatCurrency(day.expense, displayCurrency).split('.')[0]}</div>}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
                     </AnimatePresence>
 
                     {/* Loader element for Intersection Observer */}

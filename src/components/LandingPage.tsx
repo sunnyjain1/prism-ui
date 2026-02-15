@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useGoogleLogin } from '@react-oauth/google';
-import { useAuth } from '../contexts/AuthContext';
 import {
     Shield, BarChart3, Wallet, ArrowRight, Lock, Eye, TrendingUp,
     PieChart, Zap, ChevronRight, Globe,
@@ -26,7 +24,6 @@ const GoogleIcon = () => (
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
     const [scrollY, setScrollY] = useState(0);
     const [activeFeature, setActiveFeature] = useState(0);
-    const { login } = useAuth();
 
     useEffect(() => {
         const handleScroll = () => setScrollY(window.scrollY);
@@ -39,38 +36,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
         const timer = setInterval(() => setActiveFeature(p => (p + 1) % 6), 4000);
         return () => clearInterval(timer);
     }, []);
-
-    const handleGoogleLogin = useGoogleLogin({
-        onSuccess: async (tokenResponse) => {
-            try {
-                // Exchange Google access token for our JWT
-                // First get user info from Google
-                const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                    headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
-                });
-                await userInfoRes.json();
-
-                // Then call our backend's google auth endpoint
-                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/google`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: tokenResponse.access_token }),
-                });
-
-                if (!response.ok) throw new Error('Google login failed');
-
-                const { access_token } = await response.json();
-                const userRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/me`, {
-                    headers: { 'Authorization': `Bearer ${access_token}` }
-                });
-                const userData = await userRes.json();
-                login(access_token, userData);
-            } catch (err) {
-                console.error('Google login failed:', err);
-            }
-        },
-        onError: () => console.error('Google Login Failed'),
-    });
 
     const features = [
         { icon: Shield, title: 'Privacy First', desc: 'Client-side encryption keeps your financial data truly private. Not even the server can read your PII.', color: '#10b981', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
@@ -85,7 +50,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
         { value: '256-bit', label: 'AES Encryption', icon: Lock },
         { value: '100%', label: 'Client-Side Privacy', icon: Shield },
         { value: '5+', label: 'Currencies Supported', icon: Globe },
-        { value: '∞', label: 'Transactions', icon: Zap },
+        { value: '\u221e', label: 'Transactions', icon: Zap },
     ];
 
     const testimonials = [
@@ -118,9 +83,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
                     <span style={{ fontSize: '22px', fontWeight: '700', fontFamily: 'var(--font-display)', color: 'var(--text-main)' }}>Prism</span>
                 </div>
                 <div className="landing-nav-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    {/* Google SSO button in nav */}
                     <button
-                        onClick={() => handleGoogleLogin()}
+                        onClick={onLogin}
                         className="btn"
                         style={{
                             background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -217,7 +181,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
                             Start for Free <ArrowRight size={17} />
                         </button>
                         <button
-                            onClick={() => handleGoogleLogin()}
+                            onClick={onLogin}
                             className="btn"
                             style={{
                                 padding: '14px 28px', fontSize: '15px', borderRadius: '14px',
@@ -454,7 +418,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
                             transition={{ delay: i * 0.08 }}
                             style={{
                                 padding: '28px', cursor: 'default', borderRadius: '20px',
-                                background: activeFeature === i ? 'var(--bg-card)' : 'var(--bg-card)',
+                                background: 'var(--bg-card)',
                                 border: activeFeature === i ? `1px solid ${f.color}30` : '1px solid var(--border-soft)',
                                 transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                                 boxShadow: activeFeature === i ? `0 8px 30px ${f.color}15` : 'none',
@@ -711,7 +675,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
                             Create Free Account <ChevronRight size={17} style={{ marginLeft: '6px' }} />
                         </button>
                         <button
-                            onClick={() => handleGoogleLogin()}
+                            onClick={onLogin}
                             className="btn"
                             style={{
                                 padding: '14px 32px', fontSize: '15px', borderRadius: '14px',

@@ -11,7 +11,7 @@ export class AccountService {
         this.repository = repository;
     }
 
-    async createAccount(name: string, type: Account['type'], currency: string = 'USD'): Promise<Account> {
+    async createAccount(name: string, type: Account['type'], currency: string = 'INR'): Promise<Account> {
         let newAccount: Account = {
             id: crypto.randomUUID(),
             name,

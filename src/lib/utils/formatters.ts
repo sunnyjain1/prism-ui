@@ -1,13 +1,12 @@
-export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
-    const symbols: Record<string, string> = {
+export const formatCurrency = (amount: number, currency: string = 'INR'): string => {
+    const CURRENCY_SYMBOLS: Record<string, string> = {
         'USD': '$',
-        'EUR': '€',
-        'GBP': '£',
         'INR': '₹',
-        'JPY': '¥'
+        'EUR': '€',
+        'GBP': '£'
     };
 
-    const symbol = symbols[currency] || currency + ' ';
+    const symbol = CURRENCY_SYMBOLS[currency] || currency;
     return `${symbol}${Math.abs(amount).toLocaleString(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,

@@ -13,7 +13,7 @@ const Accounts: React.FC = () => {
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState('');
     const [newType, setNewType] = useState<Account['type']>('checking');
-    const [newCurrency, setNewCurrency] = useState('USD');
+    const [newCurrency, setNewCurrency] = useState('INR');
     const [limit, setLimit] = useState('');
     const [displayCurrency, setDisplayCurrency] = useState(localStorage.getItem('dashboardCurrency') || 'INR');
     const { user } = useAuth();

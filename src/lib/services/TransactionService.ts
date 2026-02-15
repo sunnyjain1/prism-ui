@@ -47,14 +47,31 @@ export class TransactionService {
     }
 
     async getMonthSummary(month: number, year: number): Promise<{ income: number, expense: number, balance: number }> {
-        const txs = await this.getTransactionsByMonth(month, year);
+        const repo = this.repository as RemoteRepository<Transaction>;
+        const response = await fetch(`${repo.url}/summary?month=${month}&year=${year}`, {
+            headers: repo.getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch month summary');
+        const summaryData: { type: string, currency: string, total: number }[] = await response.json();
+
+        // This will be converted in calculateSummary usually, but for backward compat/direct use:
+        // We'll return it and let the caller handle conversion if needed, or just sum it here for basic use.
         let income = 0;
         let expense = 0;
-        txs.forEach(t => {
-            if (t.type === 'income') income += t.amount;
-            else if (t.type === 'expense') expense += t.amount;
+        summaryData.forEach(s => {
+            if (s.type === 'income') income += s.total;
+            else if (s.type === 'expense') expense += s.total;
         });
         return { income, expense, balance: income - expense };
+    }
+
+    async getRawSummary(month: number, year: number): Promise<{ type: string, currency: string, total: number }[]> {
+        const repo = this.repository as RemoteRepository<Transaction>;
+        const response = await fetch(`${repo.url}/summary?month=${month}&year=${year}`, {
+            headers: repo.getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch raw summary');
+        return response.json();
     }
 
     async getTransactions(params: { month?: number; year?: number; start_date?: string; end_date?: string; search?: string; category_ids?: string[]; account_id?: string; limit?: number; skip?: number }): Promise<Transaction[]> {
@@ -63,7 +80,7 @@ export class TransactionService {
     }
 
     async getTransactionsByMonth(month: number, year: number): Promise<Transaction[]> {
-        return this.getTransactions({ month, year });
+        return this.getTransactions({ month, year, limit: 10000 }); // High limit to get "all"
     }
 
     async updateTransaction(id: string, transaction: Partial<Transaction>): Promise<Transaction> {
@@ -82,13 +99,26 @@ export class TransactionService {
         return inUSD * (this.EXCHANGE_RATES[toCurrency] || 1);
     }
 
-    calculateSummary(txs: Transaction[], accs: Account[], displayCurrency: string) {
+    calculateSummaryFromRaw(rawData: { type: string, currency: string, total: number }[], displayCurrency: string = 'INR') {
+        let income = 0;
+        let expense = 0;
+
+        rawData.forEach(s => {
+            const amt = this.convert(s.total, s.currency, displayCurrency);
+            if (s.type === 'income') income += amt;
+            else if (s.type === 'expense') expense += amt;
+        });
+
+        return { income, expense, balance: income - expense };
+    }
+
+    calculateSummary(txs: Transaction[], accs: Account[], displayCurrency: string = 'INR') {
         let income = 0;
         let expense = 0;
 
         txs.forEach(t => {
             const account = accs.find(a => a.id === t.account_id);
-            const amt = this.convert(t.amount, account?.currency || 'USD', displayCurrency);
+            const amt = this.convert(t.amount, account?.currency || 'INR', displayCurrency);
             if (t.type === 'income') income += amt;
             else if (t.type === 'expense') expense += amt;
         });

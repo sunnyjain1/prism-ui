@@ -59,7 +59,7 @@ const Reports: React.FC = () => {
         let expense = 0;
         transactions.forEach(t => {
             const account = accounts.find(a => a.id === t.account_id);
-            const amt = transactionService.convert(t.amount, account?.currency || 'USD', displayCurrency);
+            const amt = transactionService.convert(t.amount, account?.currency || 'INR', displayCurrency);
             if (t.type === 'income') income += amt;
             else if (t.type === 'expense') expense += amt;
         });
@@ -78,7 +78,7 @@ const Reports: React.FC = () => {
                 const existing = map.get(catId) || { name: cat.name, value: 0, color: (cat as any).color || '#64748b' };
 
                 const account = accounts.find(a => a.id === t.account_id);
-                const convertedAmount = transactionService.convert(t.amount, account?.currency || 'USD', displayCurrency);
+                const convertedAmount = transactionService.convert(t.amount, account?.currency || 'INR', displayCurrency);
 
                 existing.value += convertedAmount;
                 map.set(catId, existing);
@@ -97,7 +97,7 @@ const Reports: React.FC = () => {
         filtered.forEach(t => {
             const day = new Date(t.date).getDate().toString();
             const account = accounts.find(a => a.id === t.account_id);
-            const amt = transactionService.convert(t.amount, account?.currency || 'USD', displayCurrency);
+            const amt = transactionService.convert(t.amount, account?.currency || 'INR', displayCurrency);
             dailyMap.set(day, (dailyMap.get(day) || 0) + amt);
         });
 

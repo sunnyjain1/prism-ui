@@ -109,7 +109,7 @@ const Transactions: React.FC = () => {
     // Calculate Footer Summary
     const summary = transactions.reduce((acc, t) => {
         const account = accounts.find(a => a.id === t.account_id);
-        const amt = transactionService.convert(t.amount, account?.currency || 'USD', displayCurrency);
+        const amt = transactionService.convert(t.amount, account?.currency || 'INR', displayCurrency);
         if (t.type === 'income') acc.income += amt;
         else if (t.type === 'expense') acc.expense += amt;
         return acc;

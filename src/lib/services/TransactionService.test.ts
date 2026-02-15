@@ -65,15 +65,55 @@ describe('TransactionService', () => {
     });
 
     it('should get month summary', async () => {
-        const txs: any[] = [
-            { amount: 200, type: 'income' },
-            { amount: 100, type: 'expense' },
+        const summaryData = [
+            { type: 'income', currency: 'INR', total: 200 },
+            { type: 'expense', currency: 'INR', total: 100 },
         ];
-        mockRepo.findAll.mockResolvedValue(txs);
+        const mockFetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve(summaryData),
+        });
+        vi.stubGlobal('fetch', mockFetch);
+        mockRepo.url = 'http://api';
+        mockRepo.getHeaders = vi.fn().mockReturnValue({});
 
         const summary = await service.getMonthSummary(1, 2025);
         expect(summary.income).toBe(200);
         expect(summary.expense).toBe(100);
+        expect(summary.balance).toBe(100);
+    });
+
+    it('should get raw summary from backend', async () => {
+        const rawData = [
+            { type: 'income', currency: 'INR', total: 500 },
+            { type: 'expense', currency: 'USD', total: 50 },
+        ];
+        const mockFetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve(rawData),
+        });
+        vi.stubGlobal('fetch', mockFetch);
+        mockRepo.url = 'http://api';
+        mockRepo.getHeaders = vi.fn().mockReturnValue({});
+
+        const result = await service.getRawSummary(2, 2025);
+        expect(result).toEqual(rawData);
+        expect(mockFetch).toHaveBeenCalledWith(
+            'http://api/summary?month=2&year=2025',
+            expect.objectContaining({ headers: {} })
+        );
+    });
+
+    it('should calculate summary from raw data with currency conversion', () => {
+        const rawData = [
+            { type: 'income', currency: 'INR', total: 8312 },
+            { type: 'expense', currency: 'INR', total: 4156 },
+        ];
+
+        const summary = service.calculateSummaryFromRaw(rawData, 'INR');
+        expect(summary.income).toBe(8312);
+        expect(summary.expense).toBe(4156);
+        expect(summary.balance).toBe(4156);
     });
 
     it('should get transactions with filters', async () => {

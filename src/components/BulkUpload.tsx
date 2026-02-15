@@ -12,7 +12,7 @@ interface SupportedFormat {
 const BulkUpload: React.FC = () => {
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [selectedAccount, setSelectedAccount] = useState('');
-    const [currency, setCurrency] = useState('USD');
+    const [currency, setCurrency] = useState('INR');
     const [sourceType, setSourceType] = useState<string>('');
     const [file, setFile] = useState<File | null>(null);
     const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');

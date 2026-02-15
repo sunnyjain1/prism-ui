@@ -23,7 +23,7 @@ const TransactionDialog: React.FC<Props> = ({ onClose }) => {
 
     const [formData, setFormData] = useState({
         amount: '',
-        currency: 'USD',
+        currency: 'INR',
         description: '',
         notes: '',
         date: new Date().toISOString().split('T')[0],
