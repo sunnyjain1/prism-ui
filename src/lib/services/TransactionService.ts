@@ -79,6 +79,24 @@ export class TransactionService {
         return encryptionService.decryptBatch(txs, TX_PII_FIELDS);
     }
 
+    async aggregateTransactions(params: { month?: number; year?: number; start_date?: string; end_date?: string; search?: string; category_ids?: string[]; account_id?: string }): Promise<{ count: number; total_income: number; total_expense: number }> {
+        const repo = this.repository as RemoteRepository<Transaction>;
+        const searchParams = new URLSearchParams();
+        if (params.month) searchParams.append('month', params.month.toString());
+        if (params.year) searchParams.append('year', params.year.toString());
+        if (params.start_date) searchParams.append('start_date', params.start_date);
+        if (params.end_date) searchParams.append('end_date', params.end_date);
+        if (params.search) searchParams.append('search', params.search);
+        if (params.category_ids) params.category_ids.forEach(id => searchParams.append('category_ids', id));
+        if (params.account_id) searchParams.append('account_id', params.account_id);
+
+        const response = await fetch(`${repo.url}/aggregate?${searchParams.toString()}`, {
+            headers: repo.getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to aggregate transactions');
+        return response.json();
+    }
+
     async getTransactionsByMonth(month: number, year: number): Promise<Transaction[]> {
         return this.getTransactions({ month, year, limit: 10000 }); // High limit to get "all"
     }

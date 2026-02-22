@@ -38,6 +38,12 @@ export class AccountService {
         return encryptionService.decryptPII(account, ACCOUNT_PII_FIELDS);
     }
 
+    async updateAccount(id: string, data: Partial<Account>): Promise<Account> {
+        const encrypted = await encryptionService.encryptPII(data as Account, ACCOUNT_PII_FIELDS);
+        const result = await this.repository.update(id, encrypted);
+        return encryptionService.decryptPII(result, ACCOUNT_PII_FIELDS);
+    }
+
     async deleteAccount(id: string): Promise<void> {
         return this.repository.delete(id);
     }

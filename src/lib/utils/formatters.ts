@@ -7,7 +7,7 @@ export const formatCurrency = (amount: number, currency: string = 'INR'): string
     };
 
     const symbol = CURRENCY_SYMBOLS[currency] || currency;
-    return `${symbol}${Math.abs(amount).toLocaleString(undefined, {
+    return `${symbol}${Math.abs(amount).toLocaleString('en-IN', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     })}`;

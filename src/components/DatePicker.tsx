@@ -49,13 +49,15 @@ const DatePicker: React.FC<DatePickerProps> = ({ month, year, onChange }) => {
                     padding: '8px 16px',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '12px',
                     borderRadius: '14px',
                     border: '1px solid var(--border-soft)',
                     background: 'var(--bg-card)',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    boxShadow: isOpen ? '0 0 0 2px var(--primary-light)' : 'var(--shadow-sm)'
+                    boxShadow: isOpen ? '0 0 0 2px var(--primary-light)' : 'var(--shadow-sm)',
+                    minWidth: '170px'
                 }}
             >
                 <div style={{ color: 'var(--primary)', display: 'flex' }}>

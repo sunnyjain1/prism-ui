@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { transactionService, accountService, categoryService } from '../lib/services/context';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../lib/utils/formatters';
 import type { Transaction, Account, Category } from '../lib/core/models';
-import { ArrowUpRight, ArrowDownRight, Search, Edit2, Trash2, Download, ChevronDown, Check, Plus } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Search, Edit2, Trash2, Download, ChevronDown, Check, Plus, Loader2 } from 'lucide-react';
 
 const Transactions: React.FC = () => {
     const { } = useAuth();
@@ -27,6 +27,16 @@ const Transactions: React.FC = () => {
     // Edit Modal State
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    // Pagination
+    const PAGE_SIZE = 100;
+    const [skip, setSkip] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const loaderRef = useRef<HTMLDivElement>(null);
+
+    // Aggregate totals (from server, not from loaded transactions)
+    const [aggregate, setAggregate] = useState({ count: 0, total_income: 0, total_expense: 0 });
 
     // Initial Load: Categories & Accounts only
     useEffect(() => {
@@ -61,24 +71,69 @@ const Transactions: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const getFilterParams = () => {
+        const params: any = {};
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        if (searchQuery) params.search = searchQuery;
+        if (selectedCategoryIds.length > 0) params.category_ids = selectedCategoryIds;
+        return params;
+    };
+
     const performSearch = async () => {
         setIsLoading(true);
         setHasSearched(true);
+        setSkip(0);
         try {
-            const params: any = {};
-            if (startDate) params.start_date = startDate;
-            if (endDate) params.end_date = endDate;
-            if (searchQuery) params.search = searchQuery;
-            if (selectedCategoryIds.length > 0) params.category_ids = selectedCategoryIds;
+            const params = getFilterParams();
 
-            const txs = await transactionService.getTransactions(params);
+            // Fetch first page and aggregate totals in parallel
+            const [txs, agg] = await Promise.all([
+                transactionService.getTransactions({ ...params, skip: 0, limit: PAGE_SIZE }),
+                transactionService.aggregateTransactions(params)
+            ]);
+
             setTransactions(txs);
+            setAggregate(agg);
+            setSkip(txs.length);
+            setHasMore(txs.length >= PAGE_SIZE);
         } catch (e) {
             console.error('Failed to search transactions', e);
         } finally {
             setIsLoading(false);
         }
     };
+
+    const loadMore = useCallback(async () => {
+        if (isLoadingMore || !hasMore) return;
+        setIsLoadingMore(true);
+        try {
+            const params = getFilterParams();
+            const txs = await transactionService.getTransactions({ ...params, skip, limit: PAGE_SIZE });
+            setTransactions(prev => [...prev, ...txs]);
+            setSkip(prev => prev + txs.length);
+            setHasMore(txs.length >= PAGE_SIZE);
+        } catch (e) {
+            console.error('Failed to load more transactions', e);
+        } finally {
+            setIsLoadingMore(false);
+        }
+    }, [skip, hasMore, isLoadingMore, startDate, endDate, searchQuery, selectedCategoryIds]);
+
+    // IntersectionObserver for infinite scroll
+    useEffect(() => {
+        if (!loaderRef.current) return;
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoadingMore && hasSearched) {
+                    loadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+        observer.observe(loaderRef.current);
+        return () => observer.disconnect();
+    }, [loadMore, hasMore, isLoadingMore, hasSearched]);
 
     const handleDelete = async (id: string) => {
         if (confirm('Are you sure you want to delete this transaction?')) {
@@ -106,14 +161,6 @@ const Transactions: React.FC = () => {
         );
     };
 
-    // Calculate Footer Summary
-    const summary = transactions.reduce((acc, t) => {
-        const account = accounts.find(a => a.id === t.account_id);
-        const amt = transactionService.convert(t.amount, account?.currency || 'INR', displayCurrency);
-        if (t.type === 'income') acc.income += amt;
-        else if (t.type === 'expense') acc.expense += amt;
-        return acc;
-    }, { income: 0, expense: 0 });
 
     return (
         <div className="transactions-page" style={{ height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
@@ -317,6 +364,12 @@ const Transactions: React.FC = () => {
                         })}
                     </div>
                 )}
+
+                {/* Infinite scroll trigger */}
+                <div ref={loaderRef} style={{ height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {isLoadingMore && <Loader2 className="animate-spin" size={24} color="var(--primary)" />}
+                    {!hasMore && transactions.length > 0 && <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>All transactions loaded.</span>}
+                </div>
             </div>
 
             {/* Fixed Footer Summary */}
@@ -329,21 +382,21 @@ const Transactions: React.FC = () => {
                     zIndex: 50
                 }}>
                     <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-muted)' }}>
-                        <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{transactions.length}</span> results found
+                        <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{aggregate.count}</span> results found
                     </div>
                     <div style={{ display: 'flex', gap: '32px' }}>
                         <div>
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Total Income</span>
-                            <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--income)' }}>+{formatCurrency(summary.income, displayCurrency)}</span>
+                            <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--income)' }}>+{formatCurrency(aggregate.total_income, displayCurrency)}</span>
                         </div>
                         <div>
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Total Expense</span>
-                            <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--expense)' }}>-{formatCurrency(summary.expense, displayCurrency)}</span>
+                            <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--expense)' }}>-{formatCurrency(aggregate.total_expense, displayCurrency)}</span>
                         </div>
                         <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '32px' }}>
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Net</span>
-                            <span style={{ fontSize: '16px', fontWeight: '700', color: summary.income - summary.expense >= 0 ? 'var(--primary)' : 'var(--expense)' }}>
-                                {formatCurrency(summary.income - summary.expense, displayCurrency)}
+                            <span style={{ fontSize: '16px', fontWeight: '700', color: aggregate.total_income - aggregate.total_expense >= 0 ? 'var(--primary)' : 'var(--expense)' }}>
+                                {formatCurrency(aggregate.total_income - aggregate.total_expense, displayCurrency)}
                             </span>
                         </div>
                     </div>

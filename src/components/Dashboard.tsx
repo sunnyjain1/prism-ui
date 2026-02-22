@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { accountService, transactionService } from '../lib/services/context';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../lib/utils/formatters';
+import TransactionDialog from './TransactionDialog';
 
 import type { Transaction, Account } from '../lib/core/models';
 import {
-    ArrowUpRight, ArrowDownRight,
+    ArrowUpRight, ArrowDownRight, ArrowRightLeft,
     BarChart3, TrendingUp, Download, Upload,
-    Loader2, ArrowRight, ChevronLeft, ChevronRight
+    Loader2, ArrowRight, ChevronLeft, ChevronRight, ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DatePicker from './DatePicker';
@@ -22,12 +23,23 @@ const Dashboard: React.FC = () => {
     const [month, setMonth] = useState(new Date().getMonth() + 1);
     const [year, setYear] = useState(new Date().getFullYear());
     const [displayCurrency, setDisplayCurrency] = useState(localStorage.getItem('dashboardCurrency') || 'INR');
+    const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
     // Pagination state
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const loader = useRef(null);
+    const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
+
+    const toggleDay = (date: string) => {
+        setCollapsedDays(prev => {
+            const next = new Set(prev);
+            if (next.has(date)) next.delete(date);
+            else next.add(date);
+            return next;
+        });
+    };
 
     const handlePrevMonth = () => {
         if (month === 1) {
@@ -153,7 +165,7 @@ const Dashboard: React.FC = () => {
         const amt = transactionService.convert(t.amount, account?.currency || 'INR', displayCurrency);
 
         if (!group) {
-            group = { date: dateStr, transactions: [], income: 0, expense: 0 };
+            group = { date: dateStr, transactions: [], income: 0, expense: 0, other: 0 };
             groups.push(group);
         }
 
@@ -163,6 +175,7 @@ const Dashboard: React.FC = () => {
         group.transactions.push({ ...t, convertedAmount: amt });
         if (t.type === 'income') group.income += amt;
         else if (t.type === 'expense') group.expense += amt;
+        else group.other += amt;
 
         return groups;
     }, []);
@@ -311,7 +324,7 @@ const Dashboard: React.FC = () => {
                     { label: 'Total Income', val: summary.income, icon: ArrowUpRight, color: 'var(--income)', bg: 'var(--income-soft)' },
                     { label: 'Total Expenses', val: summary.expense, icon: ArrowDownRight, color: 'var(--expense)', bg: 'var(--expense-soft)' },
                     { label: 'Savings Rate', val: summary.income > 0 ? ((summary.balance / summary.income) * 100).toFixed(1) + '%' : '0%', icon: TrendingUp, color: 'var(--primary)', bg: 'rgba(99, 102, 241, 0.1)' },
-                    { label: 'Current Balance', val: summary.balance, icon: BarChart3, color: 'white', bg: 'var(--primary)', isMain: true },
+                    { label: 'Total Balance', val: summary.balance, icon: BarChart3, color: 'white', bg: 'var(--primary)', isMain: true },
                 ].map((item, i) => (
                     <motion.div
                         key={i}
@@ -335,7 +348,7 @@ const Dashboard: React.FC = () => {
                             </div>
                         </div>
                         <div style={{ fontSize: '26px', fontWeight: '800', letterSpacing: '-0.02em' }}>
-                            {typeof item.val === 'number' ? formatCurrency(item.val, displayCurrency) : item.val}
+                            {typeof item.val === 'number' ? ((item.val < 0 ? '-' : '') + formatCurrency(item.val, displayCurrency)) : item.val}
                         </div>
                     </motion.div>
                 ))}
@@ -371,78 +384,108 @@ const Dashboard: React.FC = () => {
                             >
                                 {fullTxs.length > 0 && dailyData.map((group, gIdx) => (
                                     <div key={group.date}>
-                                        <div style={{
-                                            position: 'sticky',
-                                            top: '80px',
-                                            zIndex: 10,
-                                            background: 'rgba(255, 255, 255, 0.8)',
-                                            backdropFilter: 'blur(8px)',
-                                            padding: '8px 16px',
-                                            margin: '0 -16px 12px -16px',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            borderBottom: '1px solid var(--border-soft)'
-                                        }}>
-                                            <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-main)' }}>
-                                                {formatDate(group.date)}
-                                            </span>
+                                        <div
+                                            onClick={() => toggleDay(group.date)}
+                                            style={{
+                                                padding: '8px 16px',
+                                                margin: '0 -16px 12px -16px',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                borderBottom: '1px solid var(--border-soft)',
+                                                cursor: 'pointer',
+                                                userSelect: 'none',
+                                                transition: 'background 0.15s ease',
+                                            }}
+                                            onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-main)'}
+                                            onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <ChevronDown
+                                                    size={16}
+                                                    style={{
+                                                        color: 'var(--text-muted)',
+                                                        transition: 'transform 0.2s ease',
+                                                        transform: collapsedDays.has(group.date) ? 'rotate(-90deg)' : 'rotate(0deg)'
+                                                    }}
+                                                />
+                                                <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-main)' }}>
+                                                    {formatDate(group.date)}
+                                                </span>
+                                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '500' }}>
+                                                    ({group.transactions.length})
+                                                </span>
+                                            </div>
                                             <div style={{ display: 'flex', gap: '16px', fontSize: '13px', fontWeight: '600' }}>
                                                 {group.income > 0 && <span style={{ color: 'var(--income)' }}>+{formatCurrency(group.income, displayCurrency)}</span>}
                                                 {group.expense > 0 && <span style={{ color: 'var(--expense)' }}>-{formatCurrency(group.expense, displayCurrency)}</span>}
+                                                {group.other > 0 && <span style={{ color: 'var(--text-muted)' }}>{formatCurrency(group.other, displayCurrency)}</span>}
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            {/* We only show transactions for this group that are in the paginated 'transactions' state */}
-                                            {transactions.filter(t => new Date(t.date).toDateString() === group.date).map((t: any, idx: number) => {
-                                                const account = accounts.find(a => a.id === t.account_id);
-                                                const convertedAmt = transactionService.convert(t.amount, account?.currency || 'INR', displayCurrency);
-                                                return (
-                                                    <motion.div
-                                                        key={t.id}
-                                                        initial={{ opacity: 0, x: -20 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        exit={{ opacity: 0, scale: 0.95 }}
-                                                        transition={{ duration: 0.2, delay: Math.min((gIdx * 5 + idx) * 0.05, 0.5) }}
-                                                        className="transaction-row"
-                                                        style={{
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '20px',
-                                                            padding: '16px',
-                                                            borderRadius: '16px',
-                                                            background: 'var(--bg-card)',
-                                                            border: '1px solid var(--border-soft)',
-                                                            transition: 'background 0.2s ease',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                        whileHover={{ background: 'var(--bg-main)', transform: 'translateZ(0)' }}
-                                                    >
-                                                        <div style={{
-                                                            width: '48px', height: '48px', borderRadius: '14px',
-                                                            background: t.type === 'income' ? 'var(--income-soft)' : 'var(--expense-soft)',
-                                                            color: t.type === 'income' ? 'var(--income)' : 'var(--expense)',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                                                        }}>
-                                                            {t.type === 'income' ? <ArrowUpRight size={24} /> : <ArrowDownRight size={24} />}
-                                                        </div>
-                                                        <div style={{ flex: 1 }}>
-                                                            <div style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '16px' }}>{t.description}</div>
-                                                            <div style={{ color: 'var(--primary)', fontWeight: '500' }}>{t.category?.name || 'General'}</div>
-                                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                                {account?.name}
-                                                                {t.notes && <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'var(--bg-main)', borderRadius: '4px', fontSize: '11px', fontStyle: 'italic' }}>{t.notes}</span>}
-                                                            </div>
-                                                        </div>
-                                                        <div style={{ textAlign: 'right' }}>
-                                                            <div style={{ fontSize: '18px', fontWeight: '800', color: t.type === 'expense' ? 'var(--expense)' : 'var(--income)' }}>
-                                                                {t.type === 'expense' ? '-' : '+'}{formatCurrency(convertedAmt, displayCurrency)}
-                                                            </div>
-                                                        </div>
-                                                    </motion.div>
-                                                )
-                                            })}
-                                        </div>
+                                        <AnimatePresence initial={false}>
+                                            {!collapsedDays.has(group.date) && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    style={{ overflow: 'hidden' }}
+                                                >
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        {transactions.filter(t => new Date(t.date).toDateString() === group.date).map((t: any, idx: number) => {
+                                                            const account = accounts.find(a => a.id === t.account_id);
+                                                            const convertedAmt = transactionService.convert(t.amount, account?.currency || 'INR', displayCurrency);
+                                                            return (
+                                                                <motion.div
+                                                                    key={t.id}
+                                                                    initial={{ opacity: 0, x: -20 }}
+                                                                    animate={{ opacity: 1, x: 0 }}
+                                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                                    transition={{ duration: 0.2, delay: Math.min((gIdx * 5 + idx) * 0.05, 0.5) }}
+                                                                    className="transaction-row"
+                                                                    style={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '20px',
+                                                                        padding: '16px',
+                                                                        borderRadius: '16px',
+                                                                        background: 'var(--bg-card)',
+                                                                        border: '1px solid var(--border-soft)',
+                                                                        transition: 'background 0.2s ease',
+                                                                        cursor: 'pointer'
+                                                                    }}
+                                                                    whileHover={{ background: 'var(--bg-main)', transform: 'translateZ(0)' }}
+                                                                    onClick={() => setEditingTx(t)}
+                                                                >
+                                                                    <div style={{
+                                                                        width: '48px', height: '48px', borderRadius: '14px',
+                                                                        background: t.type === 'income' ? 'var(--income-soft)' : t.type === 'expense' ? 'var(--expense-soft)' : 'var(--bg-main)',
+                                                                        color: t.type === 'income' ? 'var(--income)' : t.type === 'expense' ? 'var(--expense)' : 'var(--text-muted)',
+                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                                                    }}>
+                                                                        {t.type === 'income' ? <ArrowUpRight size={24} /> : t.type === 'expense' ? <ArrowDownRight size={24} /> : <ArrowRightLeft size={24} />}
+                                                                    </div>
+                                                                    <div style={{ flex: 1 }}>
+                                                                        <div style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '16px' }}>{t.description}</div>
+                                                                        <div style={{ color: 'var(--primary)', fontWeight: '500' }}>{t.category?.name || 'General'}</div>
+                                                                        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                            {account?.name}
+                                                                            {t.destination_account_id && (() => { const dest = accounts.find(a => a.id === t.destination_account_id); return dest ? <span> → {dest.name}</span> : null; })()}
+                                                                            {t.notes && <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'var(--bg-main)', borderRadius: '4px', fontSize: '11px', fontStyle: 'italic' }}>{t.notes}</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div style={{ textAlign: 'right' }}>
+                                                                        <div style={{ fontSize: '18px', fontWeight: '800', color: t.type === 'expense' ? 'var(--expense)' : t.type === 'income' ? 'var(--income)' : 'var(--text-muted)' }}>
+                                                                            {t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}{formatCurrency(convertedAmt, displayCurrency)}
+                                                                        </div>
+                                                                    </div>
+                                                                </motion.div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
                                 ))}
                             </motion.div>
@@ -511,8 +554,8 @@ const Dashboard: React.FC = () => {
                                             <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)' }}>{day.day}</div>
                                             {!day.padding && (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
-                                                    {day.income > 0 && <div style={{ color: 'var(--income)', fontSize: '11px', fontWeight: '800' }}>+{formatCurrency(day.income, displayCurrency).split('.')[0]}</div>}
-                                                    {day.expense > 0 && <div style={{ color: 'var(--expense)', fontSize: '11px', fontWeight: '800' }}>-{formatCurrency(day.expense, displayCurrency).split('.')[0]}</div>}
+                                                    {day.income > 0 && <div style={{ color: 'var(--income)', fontSize: '11px', fontWeight: '800' }}>+{formatCurrency(day.income, displayCurrency)}</div>}
+                                                    {day.expense > 0 && <div style={{ color: 'var(--expense)', fontSize: '11px', fontWeight: '800' }}>-{formatCurrency(day.expense, displayCurrency)}</div>}
                                                 </div>
                                             )}
                                         </div>
@@ -530,6 +573,16 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
             </section>
+
+            {editingTx && (
+                <TransactionDialog
+                    transaction={editingTx}
+                    onClose={() => {
+                        setEditingTx(null);
+                        loadInitialData();
+                    }}
+                />
+            )}
         </div>
     );
 };

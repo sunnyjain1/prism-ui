@@ -8,12 +8,13 @@ import { useAuth } from '../contexts/AuthContext';
 interface Props {
     onClose: () => void;
     initialAccountId?: string;
+    transaction?: Transaction;
 }
 
 const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'JPY'];
 
-const TransactionDialog: React.FC<Props> = ({ onClose }) => {
-    const [type, setType] = useState<'income' | 'expense' | 'transfer'>('expense');
+const TransactionDialog: React.FC<Props> = ({ onClose, transaction: editTx }) => {
+    const [type, setType] = useState<'income' | 'expense' | 'transfer'>(editTx?.type as any || 'expense');
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(false);
@@ -22,14 +23,14 @@ const TransactionDialog: React.FC<Props> = ({ onClose }) => {
 
 
     const [formData, setFormData] = useState({
-        amount: '',
+        amount: editTx ? String(editTx.amount) : '',
         currency: 'INR',
-        description: '',
-        notes: '',
-        date: new Date().toISOString().split('T')[0],
-        account_id: '',
-        category_id: '',
-        destination_account_id: ''
+        description: editTx?.description || '',
+        notes: editTx?.notes || '',
+        date: editTx ? new Date(editTx.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        account_id: editTx?.account_id || '',
+        category_id: editTx?.category_id || '',
+        destination_account_id: editTx?.destination_account_id || ''
     });
 
     useEffect(() => {
@@ -41,8 +42,7 @@ const TransactionDialog: React.FC<Props> = ({ onClose }) => {
             setAccounts(accs);
             setCategories(cats);
 
-            // Set default account
-            if (accs.length > 0) {
+            if (accs.length > 0 && !editTx) {
                 setFormData(prev => ({ ...prev, account_id: accs[0].id }));
             }
 
@@ -91,7 +91,11 @@ const TransactionDialog: React.FC<Props> = ({ onClose }) => {
                 destination_account_id: type === 'transfer' ? formData.destination_account_id || undefined : undefined,
             };
 
-            await transactionService.addTransaction(transactionData);
+            if (editTx) {
+                await transactionService.updateTransaction(editTx.id, transactionData);
+            } else {
+                await transactionService.addTransaction(transactionData);
+            }
 
             setSuccess(true);
             window.dispatchEvent(new CustomEvent('transaction-added'));
@@ -137,7 +141,7 @@ const TransactionDialog: React.FC<Props> = ({ onClose }) => {
                             background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer'
                         }}><X size={20} /></button>
 
-                        <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '24px' }}>New Transaction</h2>
+                        <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '24px' }}>{editTx ? 'Edit Transaction' : 'New Transaction'}</h2>
 
                         <div className="glass" style={{ display: 'flex', gap: '4px', marginBottom: '28px', padding: '4px', borderRadius: '14px', border: '1px solid var(--border)' }}>
                             {(['expense', 'income', 'transfer'] as const).map(t => (

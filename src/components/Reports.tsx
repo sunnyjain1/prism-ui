@@ -3,7 +3,7 @@ import { transactionService, accountService, categoryService } from '../lib/serv
 import type { Transaction, Account, Category } from '../lib/core/models';
 import { getMonthName, formatCurrency } from '../lib/utils/formatters';
 import {
-    TrendingUp, TrendingDown, Wallet, BarChart3, PieChart as PieChartIcon, Activity, ChevronDown
+    TrendingUp, TrendingDown, BarChart3, PieChart as PieChartIcon, Activity, ChevronDown
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
@@ -320,13 +320,23 @@ const Reports: React.FC = () => {
 
                 <section className="card">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                        <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary)' }}><Wallet size={20} /></div>
-                        <h4 style={{ margin: 0, fontSize: '16px' }}>Accounts</h4>
+                        <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary)' }}><PieChartIcon size={20} /></div>
+                        <h4 style={{ margin: 0, fontSize: '16px' }}>Category Breakdown</h4>
                     </div>
-                    {accounts.map(acc => (
-                        <div key={acc.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid var(--border-soft)' }}>
-                            <span style={{ fontSize: '14px', fontWeight: '500' }}>{acc.name}</span>
-                            <span style={{ fontWeight: '700' }}>{formatCurrency(acc.balance, acc.currency)}</span>
+                    {categorySpending.length === 0 ? (
+                        <div style={{ color: 'var(--text-muted)', fontSize: '14px', padding: '14px 0' }}>No expenses this month</div>
+                    ) : categorySpending.map((item, index) => (
+                        <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid var(--border-soft)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: item.color || COLORS[index % COLORS.length] }}></div>
+                                <span style={{ fontSize: '14px', fontWeight: '500' }}>{item.name}</span>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <span style={{ fontWeight: '700', color: 'var(--expense)' }}>-{formatCurrency(item.value, displayCurrency)}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                                    {stats.expense > 0 ? ((item.value / stats.expense) * 100).toFixed(1) : 0}%
+                                </span>
+                            </div>
                         </div>
                     ))}
                 </section>
