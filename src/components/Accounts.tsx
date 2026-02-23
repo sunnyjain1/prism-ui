@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { accountService, transactionService } from '../lib/services/context';
 import type { Account } from '../lib/core/models';
-import { CreditCard, Landmark, Banknote, TrendingUp, Plus, Pencil, X, Trash2 } from 'lucide-react';
+import { CreditCard, Landmark, Banknote, TrendingUp, Plus, Pencil, X, Trash2, RotateCcw, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../lib/utils/formatters';
 
@@ -10,6 +10,8 @@ import { formatCurrency } from '../lib/utils/formatters';
 const Accounts: React.FC = () => {
     const navigate = useNavigate();
     const [accounts, setAccounts] = useState<Account[]>([]);
+    const [deletedAccounts, setDeletedAccounts] = useState<Account[]>([]);
+    const [showDeleted, setShowDeleted] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState('');
     const [newType, setNewType] = useState<Account['type']>('checking');
@@ -27,8 +29,12 @@ const Accounts: React.FC = () => {
 
     const loadAccounts = async () => {
         try {
-            const data = await accountService.getAccounts();
+            const [data, deleted] = await Promise.all([
+                accountService.getAccounts(),
+                accountService.getDeletedAccounts()
+            ]);
             setAccounts(data);
+            setDeletedAccounts(deleted);
         } catch (e) {
             console.error('Failed to load accounts', e);
         }
@@ -56,7 +62,7 @@ const Accounts: React.FC = () => {
     };
 
     const handleDelete = async (id: string, name: string) => {
-        if (confirm(`Are you sure you want to delete "${name}"? This cannot be undone.`)) {
+        if (confirm(`Delete "${name}"? It will be moved to deleted accounts.`)) {
             try {
                 await accountService.deleteAccount(id);
                 setEditingAccount(null);
@@ -64,6 +70,15 @@ const Accounts: React.FC = () => {
             } catch (e) {
                 console.error('Failed to delete account', e);
             }
+        }
+    };
+
+    const handleRestore = async (id: string) => {
+        try {
+            await accountService.restoreAccount(id);
+            loadAccounts();
+        } catch (e) {
+            console.error('Failed to restore account', e);
         }
     };
 
@@ -413,6 +428,70 @@ const Accounts: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Deleted Accounts Section */}
+            {deletedAccounts.length > 0 && (
+                <div style={{ marginTop: '40px' }}>
+                    <button
+                        onClick={() => setShowDeleted(!showDeleted)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none',
+                            cursor: 'pointer', padding: '12px 0', color: 'var(--text-muted)', fontSize: '15px', fontWeight: '600', width: '100%'
+                        }}
+                    >
+                        <Trash2 size={18} />
+                        Deleted Accounts ({deletedAccounts.length})
+                        <ChevronDown size={16} style={{ transform: showDeleted ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s', marginLeft: 'auto' }} />
+                    </button>
+
+                    {showDeleted && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px', marginTop: '12px' }}>
+                            {deletedAccounts.map(account => (
+                                <div
+                                    key={account.id}
+                                    className="card"
+                                    onClick={() => navigate(`/accounts/${account.id}`)}
+                                    style={{
+                                        opacity: 0.6, display: 'flex', flexDirection: 'column', gap: '12px',
+                                        cursor: 'pointer', border: '1px dashed var(--border)', transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '2px' }}>{account.name}</h3>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                                {account.currency} • {account.type}
+                                                {(account as any).deleted_at && (
+                                                    <span> • Deleted {new Date((account as any).deleted_at).toLocaleDateString()}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleRestore(account.id); }}
+                                            style={{
+                                                background: 'var(--income-soft)', border: 'none', color: 'var(--income)',
+                                                padding: '6px 12px', borderRadius: '8px', cursor: 'pointer',
+                                                fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px',
+                                                transition: 'all 0.2s'
+                                            }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--income)'; e.currentTarget.style.color = 'white'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = 'var(--income-soft)'; e.currentTarget.style.color = 'var(--income)'; }}
+                                            title="Restore Account"
+                                        >
+                                            <RotateCcw size={12} /> Restore
+                                        </button>
+                                    </div>
+                                    <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-muted)' }}>
+                                        {formatCurrency(account.balance, account.currency)}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

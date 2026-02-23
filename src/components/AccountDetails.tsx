@@ -37,9 +37,13 @@ const AccountDetails: React.FC = () => {
         const loadData = async () => {
             setLoading(true);
             try {
-                const allAccounts = await accountService.getAccounts();
-                setAccounts(allAccounts);
-                const acc = allAccounts.find(a => a.id === id);
+                const [allAccounts, deletedAccts] = await Promise.all([
+                    accountService.getAccounts(),
+                    accountService.getDeletedAccounts()
+                ]);
+                const combined = [...allAccounts, ...deletedAccts];
+                setAccounts(combined);
+                const acc = combined.find(a => a.id === id);
                 setAccount(acc || null);
 
                 const txs = await transactionService.getTransactions({

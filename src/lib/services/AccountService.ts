@@ -1,6 +1,7 @@
 import type { IRepository } from '../core/interfaces';
 import type { Account } from '../core/models';
 import { encryptionService } from './EncryptionService';
+import { RemoteRepository } from '../repositories/RemoteRepository';
 
 const ACCOUNT_PII_FIELDS = ['name'];
 
@@ -9,6 +10,10 @@ export class AccountService {
 
     constructor(repository: IRepository<Account>) {
         this.repository = repository;
+    }
+
+    private get repo(): RemoteRepository<Account> {
+        return this.repository as RemoteRepository<Account>;
     }
 
     async createAccount(name: string, type: Account['type'], currency: string = 'INR'): Promise<Account> {
@@ -46,5 +51,24 @@ export class AccountService {
 
     async deleteAccount(id: string): Promise<void> {
         return this.repository.delete(id);
+    }
+
+    async getDeletedAccounts(): Promise<Account[]> {
+        const response = await fetch(`${this.repo.url}/deleted`, {
+            headers: this.repo.getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch deleted accounts');
+        const accounts = await response.json();
+        return encryptionService.decryptBatch(accounts, ACCOUNT_PII_FIELDS);
+    }
+
+    async restoreAccount(id: string): Promise<Account> {
+        const response = await fetch(`${this.repo.url}/${id}/restore`, {
+            method: 'POST',
+            headers: this.repo.getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to restore account');
+        const account = await response.json();
+        return encryptionService.decryptPII(account, ACCOUNT_PII_FIELDS);
     }
 }
