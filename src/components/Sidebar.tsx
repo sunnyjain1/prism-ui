@@ -1,10 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Wallet, Tag, Settings, BarChart3, LogOut, User as UserIcon, Database, List } from 'lucide-react';
+import { LayoutDashboard, Wallet, Tag, Settings, BarChart3, LogOut, User as UserIcon, Database, List, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { usePrivacy } from '../contexts/PrivacyContext';
 
 const Sidebar: React.FC = () => {
     const { user, logout } = useAuth();
+    const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
     const menuItems = [
         { name: 'Dashboard', path: '/', icon: LayoutDashboard },
         { name: 'Transactions', path: '/transactions', icon: List },
@@ -76,6 +78,28 @@ const Sidebar: React.FC = () => {
             </nav>
 
             <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <button
+                    onClick={togglePrivacyMode}
+                    className="btn"
+                    style={{
+                        padding: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        color: 'var(--text-main)',
+                        background: isPrivacyMode ? 'var(--bg-card)' : 'transparent',
+                        border: isPrivacyMode ? '1px solid var(--border)' : '1px solid transparent',
+                        borderRadius: '12px',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    {isPrivacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {isPrivacyMode ? 'Show Balances' : 'Hide Balances'}
+                </button>
+
                 <div style={{
                     padding: '16px',
                     background: 'var(--bg-card)',

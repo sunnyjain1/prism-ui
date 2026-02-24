@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { transactionService, accountService, categoryService } from '../lib/services/context';
+import { usePrivacy } from '../contexts/PrivacyContext';
 import type { Transaction, Account, Category } from '../lib/core/models';
 import { getMonthName, formatCurrency } from '../lib/utils/formatters';
 import {
@@ -17,6 +18,7 @@ const Reports: React.FC = () => {
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [history, setHistory] = useState<any[]>([]);
+    const { isPrivacyMode } = usePrivacy();
 
     const [month, setMonth] = useState(new Date().getMonth() + 1);
     const [year, setYear] = useState(new Date().getFullYear());
@@ -176,16 +178,16 @@ const Reports: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '32px' }}>
                 <div className="card" style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none' }}>
                     <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '8px', fontWeight: '600', textTransform: 'uppercase' }}>Income</div>
-                    <div style={{ fontSize: '26px', fontWeight: '800' }}>{formatCurrency(stats.income, displayCurrency)}</div>
+                    <div style={{ fontSize: '26px', fontWeight: '800' }}>{isPrivacyMode ? '••••••' : formatCurrency(stats.income, displayCurrency)}</div>
                 </div>
                 <div className="card" style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white', border: 'none' }}>
                     <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '8px', fontWeight: '600', textTransform: 'uppercase' }}>Expenses</div>
-                    <div style={{ fontSize: '26px', fontWeight: '800' }}>{formatCurrency(stats.expense, displayCurrency)}</div>
+                    <div style={{ fontSize: '26px', fontWeight: '800' }}>{isPrivacyMode ? '••••••' : formatCurrency(stats.expense, displayCurrency)}</div>
                 </div>
                 <div className="card">
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: '600', textTransform: 'uppercase' }}>Net Savings</div>
                     <div style={{ fontSize: '26px', fontWeight: '800', color: stats.savings >= 0 ? 'var(--income)' : 'var(--expense)' }}>
-                        {stats.savings >= 0 ? '+' : ''}{formatCurrency(stats.savings, displayCurrency)}
+                        {isPrivacyMode ? '••••••' : `${stats.savings >= 0 ? '+' : ''}${formatCurrency(stats.savings, displayCurrency)}`}
                     </div>
                 </div>
                 <div className="card" style={{ background: 'var(--primary)', color: 'white', border: 'none' }}>
@@ -243,7 +245,7 @@ const Reports: React.FC = () => {
                                 <RechartsTooltip
                                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
                                     cursor={{ fill: 'var(--border-soft)', opacity: 0.4 }}
-                                    formatter={(val: number | undefined) => formatCurrency(val || 0, displayCurrency)}
+                                    formatter={(val: number | undefined) => isPrivacyMode ? '••••••' : formatCurrency(val || 0, displayCurrency)}
                                 />
                                 <Legend
                                     iconType="circle"
@@ -261,7 +263,7 @@ const Reports: React.FC = () => {
                                 <RechartsTooltip
                                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
                                     cursor={{ stroke: 'var(--text-muted)', strokeWidth: 1, strokeDasharray: '4 4' }}
-                                    formatter={(val: number | undefined) => formatCurrency(val || 0, displayCurrency)}
+                                    formatter={(val: number | undefined) => isPrivacyMode ? '••••••' : formatCurrency(val || 0, displayCurrency)}
                                 />
                                 <Legend
                                     iconType="circle"
@@ -326,7 +328,7 @@ const Reports: React.FC = () => {
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
                                 <RechartsTooltip
                                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                                    formatter={(val: any) => [formatCurrency(val as number, displayCurrency), trendChartType === 'expense' ? 'Expense' : 'Income']}
+                                    formatter={(val: any) => [isPrivacyMode ? '••••••' : formatCurrency(val as number, displayCurrency), trendChartType === 'expense' ? 'Expense' : 'Income']}
                                 />
                                 <Area
                                     type="monotone"
@@ -353,7 +355,7 @@ const Reports: React.FC = () => {
                                     <Pie data={categorySpending} cx="50%" cy="50%" innerRadius={75} outerRadius={95} paddingAngle={8} dataKey="value">
                                         {categorySpending.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />)}
                                     </Pie>
-                                    <RechartsTooltip formatter={(val: any) => formatCurrency(val, displayCurrency)} />
+                                    <RechartsTooltip formatter={(val: any) => isPrivacyMode ? '••••••' : formatCurrency(val, displayCurrency)} />
                                 </PieChart>
                             </ResponsiveContainer>
                         ) : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>No data to display</div>}
@@ -363,7 +365,7 @@ const Reports: React.FC = () => {
                             <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px' }}>
                                 <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: item.color || COLORS[index % COLORS.length] }}></div>
                                 <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{item.name}</span>
-                                <span style={{ marginLeft: 'auto', fontWeight: 'bold' }}>{formatCurrency(item.value, displayCurrency)}</span>
+                                <span style={{ marginLeft: 'auto', fontWeight: 'bold' }}>{isPrivacyMode ? '••••••' : formatCurrency(item.value, displayCurrency)}</span>
                             </div>
                         ))}
                     </div>
@@ -382,7 +384,7 @@ const Reports: React.FC = () => {
                         return (
                             <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid var(--border-soft)' }}>
                                 <span style={{ fontSize: '14px', fontWeight: '500' }}>{t.description}</span>
-                                <span style={{ fontWeight: '700', color: 'var(--income)' }}>+{formatCurrency(amt, displayCurrency)}</span>
+                                <span style={{ fontWeight: '700', color: 'var(--income)' }}>{isPrivacyMode ? '••••••' : `+${formatCurrency(amt, displayCurrency)}`}</span>
                             </div>
                         )
                     })}
@@ -399,7 +401,7 @@ const Reports: React.FC = () => {
                         return (
                             <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid var(--border-soft)' }}>
                                 <span style={{ fontSize: '14px', fontWeight: '500' }}>{t.description}</span>
-                                <span style={{ fontWeight: '700', color: 'var(--expense)' }}>-{formatCurrency(amt, displayCurrency)}</span>
+                                <span style={{ fontWeight: '700', color: 'var(--expense)' }}>{isPrivacyMode ? '••••••' : `-${formatCurrency(amt, displayCurrency)}`}</span>
                             </div>
                         )
                     })}
@@ -419,7 +421,7 @@ const Reports: React.FC = () => {
                                 <span style={{ fontSize: '14px', fontWeight: '500' }}>{item.name}</span>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <span style={{ fontWeight: '700', color: 'var(--expense)' }}>-{formatCurrency(item.value, displayCurrency)}</span>
+                                <span style={{ fontWeight: '700', color: 'var(--expense)' }}>{isPrivacyMode ? '••••••' : `-${formatCurrency(item.value, displayCurrency)}`}</span>
                                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>
                                     {stats.expense > 0 ? ((item.value / stats.expense) * 100).toFixed(1) : 0}%
                                 </span>

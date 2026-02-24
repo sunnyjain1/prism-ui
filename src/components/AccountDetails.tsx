@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { transactionService, accountService } from '../lib/services/context';
+import { usePrivacy } from '../contexts/PrivacyContext';
 import type { Transaction, Account } from '../lib/core/models';
 import { ArrowLeft, Plus, ArrowUpRight, ArrowDownRight, ArrowRightLeft, ChevronLeft, ChevronRight, ChevronDown, X } from 'lucide-react';
 import { formatCurrency, formatDate } from '../lib/utils/formatters';
@@ -10,6 +11,7 @@ import TransactionDialog from './TransactionDialog';
 const AccountDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { isPrivacyMode } = usePrivacy();
     const [account, setAccount] = useState<Account | null>(null);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
@@ -192,9 +194,9 @@ const AccountDetails: React.FC = () => {
                         </h1>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                             <div style={{ fontSize: '24px', fontWeight: '600', color: account.balance < 0 ? 'var(--expense)' : 'var(--text-main)' }}>
-                                {formatCurrency(account.balance, account.currency)}
+                                {isPrivacyMode ? '••••••' : formatCurrency(account.balance, account.currency)}
                             </div>
-                            {account.currency !== displayCurrency && (
+                            {account.currency !== displayCurrency && !isPrivacyMode && (
                                 <div style={{ fontSize: '16px', color: 'var(--text-muted)' }}>
                                     ≈ {formatCurrency(transactionService.convert(account.balance, account.currency, displayCurrency), displayCurrency)}
                                 </div>
@@ -305,14 +307,20 @@ const AccountDetails: React.FC = () => {
                                     {currentMonthLabel} • <span style={{ color: 'var(--text-main)', fontWeight: '700' }}>{transactions.length}</span> transactions
                                 </div>
                                 <div style={{ display: 'flex', gap: '24px', fontSize: '14px', fontWeight: '700' }}>
-                                    <span style={{ color: 'var(--income)' }}>+{formatCurrency(monthlyIncome, account.currency)}</span>
-                                    <span style={{ color: 'var(--expense)' }}>-{formatCurrency(monthlyExpense, account.currency)}</span>
-                                    <span style={{
-                                        color: monthlyNet >= 0 ? 'var(--income)' : 'var(--expense)',
-                                        borderLeft: '1px solid var(--border)', paddingLeft: '16px'
-                                    }}>
-                                        Net: {monthlyNet < 0 ? '-' : ''}{formatCurrency(Math.abs(monthlyNet), account.currency)}
-                                    </span>
+                                    {isPrivacyMode ? (
+                                        <span style={{ color: 'var(--text-muted)' }}>••••••</span>
+                                    ) : (
+                                        <>
+                                            <span style={{ color: 'var(--income)' }}>+{formatCurrency(monthlyIncome, account.currency)}</span>
+                                            <span style={{ color: 'var(--expense)' }}>-{formatCurrency(monthlyExpense, account.currency)}</span>
+                                            <span style={{
+                                                color: monthlyNet >= 0 ? 'var(--income)' : 'var(--expense)',
+                                                borderLeft: '1px solid var(--border)', paddingLeft: '16px'
+                                            }}>
+                                                Net: {monthlyNet < 0 ? '-' : ''}{formatCurrency(Math.abs(monthlyNet), account.currency)}
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
@@ -354,8 +362,14 @@ const AccountDetails: React.FC = () => {
                                                 </span>
                                             </div>
                                             <div style={{ display: 'flex', gap: '16px', fontSize: '13px', fontWeight: '600' }}>
-                                                {group.income > 0 && <span style={{ color: 'var(--income)' }}>+{formatCurrency(group.income, account.currency)}</span>}
-                                                {group.expense > 0 && <span style={{ color: 'var(--expense)' }}>-{formatCurrency(group.expense, account.currency)}</span>}
+                                                {isPrivacyMode ? (
+                                                    <span style={{ color: 'var(--text-muted)' }}>••••••</span>
+                                                ) : (
+                                                    <>
+                                                        {group.income > 0 && <span style={{ color: 'var(--income)' }}>+{formatCurrency(group.income, account.currency)}</span>}
+                                                        {group.expense > 0 && <span style={{ color: 'var(--expense)' }}>-{formatCurrency(group.expense, account.currency)}</span>}
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
 
@@ -415,12 +429,12 @@ const AccountDetails: React.FC = () => {
                                                             {/* Amount & Balance */}
                                                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                                                 <div style={{ fontSize: '16px', fontWeight: '700', color: incoming ? 'var(--income)' : 'var(--expense)' }}>
-                                                                    {incoming ? '+' : '-'}{formatCurrency(tx.amount, account.currency)}
+                                                                    {isPrivacyMode ? '••••••' : `${incoming ? '+' : '-'}${formatCurrency(tx.amount, account.currency)}`}
                                                                 </div>
                                                                 <div style={{ fontSize: '11px', color: (tx as any).runningBalance < 0 ? 'var(--expense)' : 'var(--text-muted)', marginTop: '2px' }}>
-                                                                    Bal: {(tx as any).runningBalance < 0 ? '-' : ''}{formatCurrency(Math.abs((tx as any).runningBalance), account.currency)}
+                                                                    Bal: {isPrivacyMode ? '••••••' : `${(tx as any).runningBalance < 0 ? '-' : ''}${formatCurrency(Math.abs((tx as any).runningBalance), account.currency)}`}
                                                                 </div>
-                                                                {account.currency !== displayCurrency && (
+                                                                {account.currency !== displayCurrency && !isPrivacyMode && (
                                                                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                                                                         {incoming ? '+' : '-'}{formatCurrency(transactionService.convert(tx.amount, account.currency, displayCurrency), displayCurrency)}
                                                                     </div>

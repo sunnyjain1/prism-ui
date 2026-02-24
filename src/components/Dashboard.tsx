@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { accountService, transactionService } from '../lib/services/context';
 import { useAuth } from '../contexts/AuthContext';
+import { usePrivacy } from '../contexts/PrivacyContext';
 import { formatCurrency, formatDate } from '../lib/utils/formatters';
 import TransactionDialog from './TransactionDialog';
 
@@ -16,6 +17,7 @@ import DatePicker from './DatePicker';
 
 const Dashboard: React.FC = () => {
     const { user } = useAuth();
+    const { isPrivacyMode } = usePrivacy();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [fullTxs, setFullTxs] = useState<Transaction[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
@@ -348,7 +350,10 @@ const Dashboard: React.FC = () => {
                             </div>
                         </div>
                         <div style={{ fontSize: '26px', fontWeight: '800', letterSpacing: '-0.02em' }}>
-                            {typeof item.val === 'number' ? ((item.val < 0 ? '-' : '') + formatCurrency(item.val, displayCurrency)) : item.val}
+                            {isPrivacyMode
+                                ? '••••••'
+                                : (typeof item.val === 'number' ? ((item.val < 0 ? '-' : '') + formatCurrency(Math.abs(item.val), displayCurrency)) : item.val)
+                            }
                         </div>
                     </motion.div>
                 ))}
@@ -417,9 +422,15 @@ const Dashboard: React.FC = () => {
                                                 </span>
                                             </div>
                                             <div style={{ display: 'flex', gap: '16px', fontSize: '13px', fontWeight: '600' }}>
-                                                {group.income > 0 && <span style={{ color: 'var(--income)' }}>+{formatCurrency(group.income, displayCurrency)}</span>}
-                                                {group.expense > 0 && <span style={{ color: 'var(--expense)' }}>-{formatCurrency(group.expense, displayCurrency)}</span>}
-                                                {group.other > 0 && <span style={{ color: 'var(--text-muted)' }}>{formatCurrency(group.other, displayCurrency)}</span>}
+                                                {isPrivacyMode ? (
+                                                    <span style={{ color: 'var(--text-muted)' }}>••••••</span>
+                                                ) : (
+                                                    <>
+                                                        {group.income > 0 && <span style={{ color: 'var(--income)' }}>+{formatCurrency(group.income, displayCurrency)}</span>}
+                                                        {group.expense > 0 && <span style={{ color: 'var(--expense)' }}>-{formatCurrency(group.expense, displayCurrency)}</span>}
+                                                        {group.other > 0 && <span style={{ color: 'var(--text-muted)' }}>{formatCurrency(group.other, displayCurrency)}</span>}
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                         <AnimatePresence initial={false}>
@@ -463,21 +474,28 @@ const Dashboard: React.FC = () => {
                                                                         color: t.type === 'income' ? 'var(--income)' : t.type === 'expense' ? 'var(--expense)' : 'var(--text-muted)',
                                                                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                                                                     }}>
-                                                                        {t.type === 'income' ? <ArrowUpRight size={24} /> : t.type === 'expense' ? <ArrowDownRight size={24} /> : <ArrowRightLeft size={24} />}
+                                                                        {t.type === 'expense' ? <ArrowDownRight size={16} /> : t.type === 'income' ? <ArrowUpRight size={16} /> : <ArrowRightLeft size={16} />}
                                                                     </div>
                                                                     <div style={{ flex: 1 }}>
-                                                                        <div style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '16px' }}>{t.description}</div>
-                                                                        <div style={{ color: 'var(--primary)', fontWeight: '500' }}>{t.category?.name || 'General'}</div>
-                                                                        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                                            {account?.name}
-                                                                            {t.destination_account_id && (() => { const dest = accounts.find(a => a.id === t.destination_account_id); return dest ? <span> → {dest.name}</span> : null; })()}
-                                                                            {t.notes && <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'var(--bg-main)', borderRadius: '4px', fontSize: '11px', fontStyle: 'italic' }}>{t.notes}</span>}
+                                                                        <div style={{ fontWeight: '600', fontSize: '15px' }}>{t.description}</div>
+                                                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '8px' }}>
+                                                                            <span>{account?.name || 'Unknown Account'}</span>
+                                                                            <span>•</span>
+                                                                            <span>{t.category?.name || 'Uncategorized'}</span>
                                                                         </div>
                                                                     </div>
-                                                                    <div style={{ textAlign: 'right' }}>
-                                                                        <div style={{ fontSize: '18px', fontWeight: '800', color: t.type === 'expense' ? 'var(--expense)' : t.type === 'income' ? 'var(--income)' : 'var(--text-muted)' }}>
-                                                                            {t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}{formatCurrency(convertedAmt, displayCurrency)}
-                                                                        </div>
+                                                                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                                                                        <span style={{
+                                                                            fontWeight: '700', fontSize: '16px',
+                                                                            color: t.type === 'income' ? 'var(--income)' : t.type === 'expense' ? 'var(--text-main)' : 'var(--text-muted)'
+                                                                        }}>
+                                                                            {isPrivacyMode ? '••••••' : `${t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}${formatCurrency(t.amount, account?.currency || 'INR')}`}
+                                                                        </span>
+                                                                        {account?.currency !== displayCurrency && !isPrivacyMode && (
+                                                                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-main)', padding: '2px 6px', borderRadius: '4px' }}>
+                                                                                ≈ {formatCurrency(convertedAmt, displayCurrency)}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 </motion.div>
                                                             )

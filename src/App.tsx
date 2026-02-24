@@ -15,6 +15,7 @@ import Transactions from './components/Transactions';
 import AccountDetails from './components/AccountDetails';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CryptoProvider } from './contexts/CryptoContext';
+import { PrivacyProvider } from './contexts/PrivacyContext';
 import { Plus, Loader2 } from 'lucide-react';
 
 const AuthController: React.FC = () => {
@@ -133,14 +134,15 @@ const AuthController: React.FC = () => {
 const App: React.FC = () => {
     return (
         <Router>
-            <CryptoProvider>
-                <AuthProvider>
-                    <AuthController />
-                </AuthProvider>
-            </CryptoProvider>
+            <AuthProvider>
+                <CryptoProvider>
+                    <PrivacyProvider>
+                        <AuthController />
+                    </PrivacyProvider>
+                </CryptoProvider>
+            </AuthProvider>
         </Router>
     );
 };
 
 export default App;
-

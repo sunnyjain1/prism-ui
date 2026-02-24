@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { transactionService, accountService, categoryService } from '../lib/services/context';
 import { useAuth } from '../contexts/AuthContext';
+import { usePrivacy } from '../contexts/PrivacyContext';
 import { formatCurrency, formatDate } from '../lib/utils/formatters';
 import type { Transaction, Account, Category } from '../lib/core/models';
 import { ArrowUpRight, ArrowDownRight, Search, Edit2, Trash2, Download, ChevronDown, Check, Plus, Loader2 } from 'lucide-react';
 
 const Transactions: React.FC = () => {
     const { } = useAuth();
+    const { isPrivacyMode } = usePrivacy();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -336,7 +338,7 @@ const Transactions: React.FC = () => {
                                     <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '24px' }}>
                                         <div>
                                             <div style={{ fontWeight: '700', fontSize: '15px', color: t.type === 'expense' ? 'var(--expense)' : 'var(--income)' }}>
-                                                {t.type === 'expense' ? '-' : '+'}{formatCurrency(amt, displayCurrency)}
+                                                {isPrivacyMode ? '••••••' : `${t.type === 'expense' ? '-' : '+'}${formatCurrency(amt, displayCurrency)}`}
                                             </div>
                                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{account?.name}</div>
                                         </div>
@@ -387,16 +389,20 @@ const Transactions: React.FC = () => {
                     <div style={{ display: 'flex', gap: '32px' }}>
                         <div>
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Total Income</span>
-                            <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--income)' }}>+{formatCurrency(aggregate.total_income, displayCurrency)}</span>
+                            <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--income)' }}>
+                                {isPrivacyMode ? '••••••' : `+${formatCurrency(aggregate.total_income, displayCurrency)}`}
+                            </span>
                         </div>
                         <div>
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Total Expense</span>
-                            <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--expense)' }}>-{formatCurrency(aggregate.total_expense, displayCurrency)}</span>
+                            <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--expense)' }}>
+                                {isPrivacyMode ? '••••••' : `-${formatCurrency(aggregate.total_expense, displayCurrency)}`}
+                            </span>
                         </div>
                         <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '32px' }}>
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Net</span>
                             <span style={{ fontSize: '16px', fontWeight: '700', color: aggregate.total_income - aggregate.total_expense >= 0 ? 'var(--primary)' : 'var(--expense)' }}>
-                                {formatCurrency(aggregate.total_income - aggregate.total_expense, displayCurrency)}
+                                {isPrivacyMode ? '••••••' : formatCurrency(aggregate.total_income - aggregate.total_expense, displayCurrency)}
                             </span>
                         </div>
                     </div>

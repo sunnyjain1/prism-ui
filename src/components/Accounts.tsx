@@ -4,6 +4,7 @@ import { accountService, transactionService } from '../lib/services/context';
 import type { Account } from '../lib/core/models';
 import { CreditCard, Landmark, Banknote, TrendingUp, Plus, Pencil, X, Trash2, RotateCcw, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { usePrivacy } from '../contexts/PrivacyContext';
 import { formatCurrency } from '../lib/utils/formatters';
 
 
@@ -25,6 +26,7 @@ const Accounts: React.FC = () => {
     const [editName, setEditName] = useState('');
     const [editType, setEditType] = useState<Account['type']>('checking');
     const [editCurrency, setEditCurrency] = useState('INR');
+    const { isPrivacyMode } = usePrivacy();
 
 
     const loadAccounts = async () => {
@@ -47,6 +49,28 @@ const Accounts: React.FC = () => {
         return () => window.removeEventListener('currency-changed', handleCurrency);
     }, []);
 
+    // Calculate Portfolio Stats
+    const portfolioStats = React.useMemo(() => {
+        let assets = 0;
+        let liabilities = 0;
+
+        accounts.forEach(acc => {
+            const convertedBalance = transactionService.convert(acc.balance, acc.currency, displayCurrency);
+            if (convertedBalance >= 0) {
+                assets += convertedBalance;
+            } else {
+                liabilities += Math.abs(convertedBalance);
+            }
+        });
+
+        return {
+            netWorth: assets - liabilities,
+            assets,
+            liabilities,
+            ratio: assets + liabilities === 0 ? 50 : (assets / (assets + liabilities)) * 100
+        };
+    }, [accounts, displayCurrency]);
+
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newName) return;
@@ -62,14 +86,13 @@ const Accounts: React.FC = () => {
     };
 
     const handleDelete = async (id: string, name: string) => {
-        if (confirm(`Delete "${name}"? It will be moved to deleted accounts.`)) {
-            try {
-                await accountService.deleteAccount(id);
-                setEditingAccount(null);
-                loadAccounts();
-            } catch (e) {
-                console.error('Failed to delete account', e);
-            }
+        if (!confirm(`Are you sure you want to delete "${name}"? (It will be moved to the deleted section)`)) return;
+        try {
+            await accountService.deleteAccount(id);
+            setEditingAccount(null); // close edit dialog if open
+            loadAccounts();
+        } catch (e) {
+            console.error('Failed to delete account', e);
         }
     };
 
@@ -110,20 +133,78 @@ const Accounts: React.FC = () => {
                     <h1 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '4px' }}>My Accounts</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Manage your bank accounts, credit cards, and cash.</p>
                 </div>
-                <button
-                    className="btn btn-primary"
-                    onClick={() => setIsAdding(true)}
-                    disabled={user?.role === 'viewer'}
-                    style={{
-                        opacity: user?.role === 'viewer' ? 0.6 : 1,
-                        cursor: user?.role === 'viewer' ? 'not-allowed' : 'pointer'
-                    }}
-                >
-                    <Plus size={18} />
-                    {user?.role === 'viewer' ? 'Read-Only' : 'Add Account'}
-                </button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => setIsAdding(true)}
+                        disabled={user?.role === 'viewer'}
+                        style={{
+                            opacity: user?.role === 'viewer' ? 0.6 : 1,
+                            cursor: user?.role === 'viewer' ? 'not-allowed' : 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '8px'
+                        }}
+                    >
+                        <Plus size={18} />
+                        {user?.role === 'viewer' ? 'Read-Only' : 'Add Account'}
+                    </button>
+                </div>
 
             </header>
+
+            {/* Premium Portfolio Overview Card */}
+            <div
+                style={{
+                    background: 'linear-gradient(135deg, #1e1e2d 0%, #151521 100%)',
+                    borderRadius: '24px',
+                    padding: '32px',
+                    marginBottom: '40px',
+                    color: 'white',
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                    cursor: 'default'
+                }}
+            >
+                {/* Decorative background elements */}
+                <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', bottom: '-50px', left: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(16,185,129,0.15) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
+
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                    <div style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '2px', opacity: 0.7, marginBottom: '8px', fontWeight: '600' }}>
+                        Total Net Worth
+                    </div>
+                    <div style={{ fontSize: '56px', fontWeight: '800', marginBottom: '32px', letterSpacing: '-0.02em', textShadow: portfolioStats.netWorth >= 0 ? '0 0 40px rgba(16,185,129,0.3)' : '0 0 40px rgba(239,68,68,0.3)' }}>
+                        {isPrivacyMode ? '••••••' : formatCurrency(portfolioStats.netWorth, displayCurrency)}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '24px' }}>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', opacity: 0.8, marginBottom: '8px' }}>
+                                <Landmark size={16} color="#10b981" /> Assets
+                            </div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>
+                                {isPrivacyMode ? '••••••' : formatCurrency(portfolioStats.assets, displayCurrency)}
+                            </div>
+                        </div>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', opacity: 0.8, marginBottom: '8px' }}>
+                                <CreditCard size={16} color="#ef4444" /> Liabilities
+                            </div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#ef4444' }}>
+                                {isPrivacyMode ? '••••••' : formatCurrency(portfolioStats.liabilities, displayCurrency)}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Visual Ratio Bar */}
+                    <div style={{ height: '6px', width: '100%', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden', display: 'flex' }}>
+                        <div style={{ height: '100%', width: `${portfolioStats.ratio}%`, background: '#10b981', transition: 'width 1s ease-in-out' }} />
+                        <div style={{ height: '100%', width: `${100 - portfolioStats.ratio}%`, background: '#ef4444', transition: 'width 1s ease-in-out' }} />
+                    </div>
+                </div>
+            </div>
 
             {isAdding && (
                 <div className="card" style={{ marginBottom: '32px', maxWidth: '500px' }}>
@@ -231,7 +312,7 @@ const Accounts: React.FC = () => {
                                 <div style={{ textAlign: 'right' }}>
                                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</div>
                                     <div style={{ fontSize: '18px', fontWeight: '800', color: groupTotal < 0 ? 'var(--expense)' : 'var(--text-main)' }}>
-                                        {groupTotal < 0 ? '-' : ''}{formatCurrency(Math.abs(groupTotal), displayCurrency)}
+                                        {isPrivacyMode ? '••••••' : `${groupTotal < 0 ? '-' : ''}${formatCurrency(Math.abs(groupTotal), displayCurrency)}`}
                                     </div>
                                 </div>
                             </div>
@@ -279,12 +360,12 @@ const Accounts: React.FC = () => {
 
                                             <div style={{ marginTop: 'auto' }}>
                                                 <div style={{ fontSize: '22px', fontWeight: '800', color: account.balance < 0 && !isCredit ? 'var(--expense)' : 'var(--text-main)' }}>
-                                                    {formatCurrency(account.balance, account.currency)}
-                                                    {account.balance < 0 && !isCredit && <span style={{ fontSize: '12px', fontWeight: '500', marginLeft: '4px' }}>(Overdrawn)</span>}
+                                                    {isPrivacyMode ? '••••••' : formatCurrency(account.balance, account.currency)}
+                                                    {!isPrivacyMode && account.balance < 0 && !isCredit && <span style={{ fontSize: '12px', fontWeight: '500', marginLeft: '4px' }}>(Overdrawn)</span>}
                                                 </div>
                                                 {account.currency !== displayCurrency && (
                                                     <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                        ≈ {formatCurrency(transactionService.convert(account.balance, account.currency, displayCurrency), displayCurrency)}
+                                                        {isPrivacyMode ? '≈ ••••••' : `≈ ${formatCurrency(transactionService.convert(account.balance, account.currency, displayCurrency), displayCurrency)}`}
                                                     </div>
                                                 )}
                                             </div>
@@ -310,13 +391,13 @@ const Accounts: React.FC = () => {
                                                     <div style={{ flex: 1, padding: '8px', borderRadius: '10px', background: 'var(--bg-main)', textAlign: 'center' }}>
                                                         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>This Month</div>
                                                         <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--income)' }}>
-                                                            {formatCurrency(account.monthly_income, account.currency)}
+                                                            {isPrivacyMode ? '••••••' : formatCurrency(account.monthly_income, account.currency)}
                                                         </div>
                                                     </div>
                                                     <div style={{ flex: 1, padding: '8px', borderRadius: '10px', background: 'var(--bg-main)', textAlign: 'center' }}>
                                                         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>Expenses</div>
                                                         <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--expense)' }}>
-                                                            {formatCurrency(account.monthly_expense, account.currency)}
+                                                            {isPrivacyMode ? '••••••' : formatCurrency(account.monthly_expense, account.currency)}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -486,7 +567,7 @@ const Accounts: React.FC = () => {
                                         </button>
                                     </div>
                                     <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-muted)' }}>
-                                        {formatCurrency(account.balance, account.currency)}
+                                        {isPrivacyMode ? '••••••' : formatCurrency(account.balance, account.currency)}
                                     </div>
                                 </div>
                             ))}
