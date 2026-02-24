@@ -22,7 +22,7 @@ const AuthController: React.FC = () => {
     const location = useLocation();
     const [authView, setAuthView] = useState<'landing' | 'login' | 'register'>('landing');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [dialogProps, setDialogProps] = useState<{ accountId?: string }>({});
+    const [dialogProps, setDialogProps] = useState<{ accountId?: string; date?: string; }>({});
     const [isFabHovered, setIsFabHovered] = useState(false);
 
     useEffect(() => {
@@ -123,6 +123,7 @@ const AuthController: React.FC = () => {
                         setDialogProps({});
                     }}
                     initialAccountId={dialogProps.accountId}
+                    initialDate={dialogProps.date}
                 />
             )}
         </div>

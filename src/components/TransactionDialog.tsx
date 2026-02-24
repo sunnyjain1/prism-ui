@@ -8,12 +8,13 @@ import { useAuth } from '../contexts/AuthContext';
 interface Props {
     onClose: () => void;
     initialAccountId?: string;
+    initialDate?: string;
     transaction?: Transaction;
 }
 
 const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'JPY'];
 
-const TransactionDialog: React.FC<Props> = ({ onClose, transaction: editTx }) => {
+const TransactionDialog: React.FC<Props> = ({ onClose, initialAccountId, initialDate, transaction: editTx }) => {
     const [type, setType] = useState<'income' | 'expense' | 'transfer'>(editTx?.type as any || 'expense');
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -27,8 +28,8 @@ const TransactionDialog: React.FC<Props> = ({ onClose, transaction: editTx }) =>
         currency: 'INR',
         description: editTx?.description || '',
         notes: editTx?.notes || '',
-        date: editTx ? new Date(editTx.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        account_id: editTx?.account_id || '',
+        date: editTx ? new Date(editTx.date).toISOString().split('T')[0] : (initialDate || new Date().toISOString().split('T')[0]),
+        account_id: editTx?.account_id || initialAccountId || '',
         category_id: editTx?.category_id || '',
         destination_account_id: editTx?.destination_account_id || ''
     });
@@ -42,7 +43,7 @@ const TransactionDialog: React.FC<Props> = ({ onClose, transaction: editTx }) =>
             setAccounts(accs);
             setCategories(cats);
 
-            if (accs.length > 0 && !editTx) {
+            if (accs.length > 0 && !editTx && !initialAccountId) {
                 setFormData(prev => ({ ...prev, account_id: accs[0].id }));
             }
 

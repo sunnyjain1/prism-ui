@@ -131,8 +131,15 @@ const AccountDetails: React.FC = () => {
     }, [id, month, year, startDate, endDate, displayCurrency]); // re-fetch when date or currency changes
 
     const handleAddTransaction = () => {
+        let initialDate = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        // If not viewing the current month, default to the 1st of the viewed month
+        if (month !== now.getMonth() + 1 || year !== now.getFullYear()) {
+            initialDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        }
+
         window.dispatchEvent(new CustomEvent('open-transaction-dialog', {
-            detail: { accountId: id }
+            detail: { accountId: id, date: initialDate }
         }));
     };
 

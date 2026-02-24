@@ -175,7 +175,7 @@ const Transactions: React.FC = () => {
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <button
                         className="btn btn-primary"
-                        onClick={() => window.dispatchEvent(new Event('open-transaction-dialog'))}
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-transaction-dialog', { detail: { date: startDate || undefined } }))}
                         style={{ padding: '8px 16px', borderRadius: '10px', boxShadow: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                         <Plus size={18} /> Add

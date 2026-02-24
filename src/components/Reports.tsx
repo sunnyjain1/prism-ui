@@ -3,12 +3,12 @@ import { transactionService, accountService, categoryService } from '../lib/serv
 import type { Transaction, Account, Category } from '../lib/core/models';
 import { getMonthName, formatCurrency } from '../lib/utils/formatters';
 import {
-    TrendingUp, TrendingDown, BarChart3, PieChart as PieChartIcon, Activity, ChevronDown
+    TrendingUp, TrendingDown, BarChart3, PieChart as PieChartIcon, Activity, ChevronDown, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
     AreaChart, Area, XAxis, YAxis, CartesianGrid,
-    BarChart, Bar, Legend
+    BarChart, Bar, Legend, LineChart, Line
 } from 'recharts';
 import DatePicker from './DatePicker';
 
@@ -25,6 +25,8 @@ const Reports: React.FC = () => {
     // Filters for charts
     const [trendChartType, setTrendChartType] = useState<'income' | 'expense'>('expense');
     const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
+    const [historyChartType, setHistoryChartType] = useState<'bar' | 'line'>('line');
+    const [isolatedLine, setIsolatedLine] = useState<string | null>(null);
 
     const loadData = async () => {
         try {
@@ -113,6 +115,31 @@ const Reports: React.FC = () => {
         return result;
     }, [transactions, trendChartType, selectedCategoryId, displayCurrency, accounts, month, year]);
 
+    const handlePrevMonth = () => {
+        if (month === 1) {
+            setMonth(12);
+            setYear(y => y - 1);
+        } else {
+            setMonth(m => m - 1);
+        }
+    };
+
+    const handleNextMonth = () => {
+        if (month === 12) {
+            setMonth(1);
+            setYear(y => y + 1);
+        } else {
+            setMonth(m => m + 1);
+        }
+    };
+
+    const historyWithTotal = useMemo(() => {
+        return history.map(h => ({
+            ...h,
+            total: h.income - h.expense
+        }));
+    }, [history]);
+
     const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 
     return (
@@ -123,11 +150,27 @@ const Reports: React.FC = () => {
                     <p style={{ color: 'var(--text-muted)' }}>Visual insights and history for <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{getMonthName(month, year)}</span></p>
                 </div>
 
-                <DatePicker
-                    month={month}
-                    year={year}
-                    onChange={(m, y) => { setMonth(m); setYear(y); }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                        onClick={handlePrevMonth}
+                        className="btn"
+                        style={{ padding: '8px', borderRadius: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-soft)', color: 'var(--text-main)', cursor: 'pointer' }}
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+                    <DatePicker
+                        month={month}
+                        year={year}
+                        onChange={(m, y) => { setMonth(m); setYear(y); }}
+                    />
+                    <button
+                        onClick={handleNextMonth}
+                        className="btn"
+                        style={{ padding: '8px', borderRadius: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-soft)', color: 'var(--text-main)', cursor: 'pointer' }}
+                    >
+                        <ChevronRight size={20} />
+                    </button>
+                </div>
             </header>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '32px' }}>
@@ -156,36 +199,80 @@ const Reports: React.FC = () => {
 
             <section className="card" style={{ marginBottom: '32px', padding: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <h3 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <BarChart3 size={20} color="var(--primary)" /> Monthly History
-                    </h3>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>Comparison of last 6 months relative to selection</p>
+                    <div>
+                        <h3 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <BarChart3 size={20} color="var(--primary)" /> Monthly History
+                        </h3>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0, marginTop: '4px' }}>Comparison of last 6 months relative to selection</p>
+                    </div>
+
+                    <div className="glass" style={{ padding: '4px', borderRadius: '10px', display: 'flex', gap: '2px', background: 'var(--bg-main)' }}>
+                        <button onClick={() => setHistoryChartType('line')}
+                            style={{
+                                padding: '6px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                                background: historyChartType === 'line' ? 'var(--bg-card)' : 'transparent',
+                                color: historyChartType === 'line' ? 'var(--text-main)' : 'var(--text-muted)',
+                                boxShadow: historyChartType === 'line' ? 'var(--shadow-sm)' : 'none'
+                            }}>Line Graph</button>
+                        <button onClick={() => setHistoryChartType('bar')}
+                            style={{
+                                padding: '6px 16px', borderRadius: '8px', border: 'none', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                                background: historyChartType === 'bar' ? 'var(--bg-card)' : 'transparent',
+                                color: historyChartType === 'bar' ? 'var(--text-main)' : 'var(--text-muted)',
+                                boxShadow: historyChartType === 'bar' ? 'var(--shadow-sm)' : 'none'
+                            }}>Bar Chart</button>
+                    </div>
                 </div>
                 <div style={{ height: '300px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={history}>
-                            <defs>
-                                <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="var(--income)" stopOpacity={1} />
-                                    <stop offset="100%" stopColor="var(--income)" stopOpacity={0.6} />
-                                </linearGradient>
-                                <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="var(--expense)" stopOpacity={1} />
-                                    <stop offset="100%" stopColor="var(--expense)" stopOpacity={0.6} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-soft)" />
-                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
-                            <RechartsTooltip
-                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                                cursor={{ fill: 'var(--border-soft)', opacity: 0.4 }}
-                                formatter={(val: number | undefined) => formatCurrency(val || 0, displayCurrency)}
-                            />
-                            <Legend iconType="circle" />
-                            <Bar dataKey="income" name="Income" fill="url(#incomeGradient)" radius={[6, 6, 0, 0]} animationBegin={200} animationDuration={1000} />
-                            <Bar dataKey="expense" name="Expense" fill="url(#expenseGradient)" radius={[6, 6, 0, 0]} animationBegin={400} animationDuration={1000} />
-                        </BarChart>
+                        {historyChartType === 'bar' ? (
+                            <BarChart data={history}>
+                                <defs>
+                                    <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="var(--income)" stopOpacity={1} />
+                                        <stop offset="100%" stopColor="var(--income)" stopOpacity={0.6} />
+                                    </linearGradient>
+                                    <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="var(--expense)" stopOpacity={1} />
+                                        <stop offset="100%" stopColor="var(--expense)" stopOpacity={0.6} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-soft)" />
+                                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
+                                <RechartsTooltip
+                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                                    cursor={{ fill: 'var(--border-soft)', opacity: 0.4 }}
+                                    formatter={(val: number | undefined) => formatCurrency(val || 0, displayCurrency)}
+                                />
+                                <Legend
+                                    iconType="circle"
+                                    onClick={(e) => setIsolatedLine(isolatedLine === e.dataKey ? null : String(e.dataKey))}
+                                    wrapperStyle={{ cursor: 'pointer', userSelect: 'none' }}
+                                />
+                                <Bar hide={isolatedLine !== null && isolatedLine !== 'income'} dataKey="income" name="Income" fill="url(#incomeGradient)" radius={[6, 6, 0, 0]} animationBegin={200} animationDuration={1000} />
+                                <Bar hide={isolatedLine !== null && isolatedLine !== 'expense'} dataKey="expense" name="Expense" fill="url(#expenseGradient)" radius={[6, 6, 0, 0]} animationBegin={400} animationDuration={1000} />
+                            </BarChart>
+                        ) : (
+                            <LineChart data={historyWithTotal}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-soft)" />
+                                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
+                                <RechartsTooltip
+                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                                    cursor={{ stroke: 'var(--text-muted)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                    formatter={(val: number | undefined) => formatCurrency(val || 0, displayCurrency)}
+                                />
+                                <Legend
+                                    iconType="circle"
+                                    onClick={(e) => setIsolatedLine(isolatedLine === e.dataKey ? null : String(e.dataKey))}
+                                    wrapperStyle={{ cursor: 'pointer', userSelect: 'none' }}
+                                />
+                                <Line hide={isolatedLine !== null && isolatedLine !== 'income'} type="monotone" dataKey="income" name="Income" stroke="var(--income)" strokeWidth={3} dot={{ strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} animationDuration={1000} />
+                                <Line hide={isolatedLine !== null && isolatedLine !== 'expense'} type="monotone" dataKey="expense" name="Expense" stroke="var(--expense)" strokeWidth={3} dot={{ strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} animationDuration={1000} />
+                                <Line hide={isolatedLine !== null && isolatedLine !== 'total'} type="monotone" dataKey="total" name="Total (Net)" stroke="var(--primary)" strokeWidth={3} dot={{ strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} animationDuration={1000} />
+                            </LineChart>
+                        )}
                     </ResponsiveContainer>
                 </div>
             </section>
