@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Wallet, Tag, Settings, BarChart3, LogOut, User as UserIcon, Database, List, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Sidebar: React.FC = () => {
     const { user, logout } = useAuth();
@@ -78,28 +79,6 @@ const Sidebar: React.FC = () => {
             </nav>
 
             <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <button
-                    onClick={togglePrivacyMode}
-                    className="btn"
-                    style={{
-                        padding: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        color: 'var(--text-main)',
-                        background: isPrivacyMode ? 'var(--bg-card)' : 'transparent',
-                        border: isPrivacyMode ? '1px solid var(--border)' : '1px solid transparent',
-                        borderRadius: '12px',
-                        fontWeight: '600',
-                        fontSize: '14px',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    {isPrivacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
-                    {isPrivacyMode ? 'Show Balances' : 'Hide Balances'}
-                </button>
-
                 <div style={{
                     padding: '16px',
                     background: 'var(--bg-card)',
@@ -116,10 +95,33 @@ const Sidebar: React.FC = () => {
                     }}>
                         <UserIcon size={20} />
                     </div>
-                    <div style={{ overflow: 'hidden' }}>
+                    <div style={{ overflow: 'hidden', flex: 1 }}>
                         <div style={{ fontWeight: '600', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.full_name || 'User'}</div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.role}</div>
                     </div>
+                    <button
+                        onClick={togglePrivacyMode}
+                        style={{
+                            background: 'transparent', border: 'none', color: isPrivacyMode ? 'var(--text-muted)' : 'var(--text-main)',
+                            cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', borderRadius: '8px', transition: 'all 0.2s'
+                        }}
+                        className="hover-bg"
+                        title={isPrivacyMode ? "Show Balances" : "Hide Balances"}
+                    >
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={isPrivacyMode ? "eye-off" : "eye"}
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                transition={{ duration: 0.2 }}
+                                style={{ display: 'flex' }}
+                            >
+                                {isPrivacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </motion.div>
+                        </AnimatePresence>
+                    </button>
                 </div>
 
                 <button
