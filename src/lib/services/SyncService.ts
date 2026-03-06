@@ -37,6 +37,7 @@ export interface SyncConfig {
     last_sync_status: 'idle' | 'syncing' | 'success' | 'failed';
     last_sync_error: string | null;
     last_sync_txn_count: number;
+    has_pdf_password: boolean;
 }
 
 export interface GmailStatus {
@@ -97,6 +98,7 @@ export async function createOrUpdateSyncConfig(
         sync_interval_days?: number;
         attachment_filename_pattern?: string;
         is_enabled?: boolean;
+        pdf_password?: string;
     }
 ): Promise<SyncConfig> {
     const response = await fetch(`${API_URL}/accounts/${accountId}/config`, {
@@ -115,6 +117,7 @@ export async function updateSyncConfig(
         sync_interval_days: number;
         attachment_filename_pattern: string;
         is_enabled: boolean;
+        pdf_password: string;
     }>
 ): Promise<SyncConfig> {
     const response = await fetch(`${API_URL}/accounts/${accountId}/config`, {

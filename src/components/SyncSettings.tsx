@@ -79,6 +79,8 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
     const [intervalDays, setIntervalDays] = useState(30);
     const [filenamePattern, setFilenamePattern] = useState('');
     const [isEnabled, setIsEnabled] = useState(true);
+    const [pdfPassword, setPdfPassword] = useState('');
+    const [hasPdfPassword, setHasPdfPassword] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -99,6 +101,8 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
                 setIntervalDays(config.sync_interval_days);
                 setFilenamePattern(config.attachment_filename_pattern || '');
                 setIsEnabled(config.is_enabled);
+                setHasPdfPassword(config.has_pdf_password || false);
+                setPdfPassword(''); // Clear password field, we rely on has_pdf_password for UI
                 // Try to match a preset
                 const matchedPreset = Object.entries(IMPORTER_PRESETS).find(
                     ([, p]) => p.key === config.importer_key && p.query === config.gmail_search_query
@@ -152,9 +156,12 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
                 importer_key: importerKey,
                 sync_interval_days: intervalDays,
                 attachment_filename_pattern: filenamePattern || undefined,
-                is_enabled: isEnabled
+                is_enabled: isEnabled,
+                ...(pdfPassword ? { pdf_password: pdfPassword } : {})
             });
             setSyncConfig(config);
+            setHasPdfPassword(config.has_pdf_password || false);
+            setPdfPassword('');
             setSyncResult({ status: 'saved', message: 'Settings saved!' });
             setTimeout(() => setSyncResult(null), 3000);
         } catch (e: any) {
@@ -171,6 +178,8 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
             setGmailQuery('');
             setImporterKey('');
             setPreset('custom');
+            setPdfPassword('');
+            setHasPdfPassword(false);
             setSyncResult(null);
         } catch (e) {
             console.error('Failed to delete config', e);
@@ -395,6 +404,25 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
                                     style={inputStyle}
                                 />
                             </div>
+
+                            {/* PDF Password */}
+                            {importerKey && importerKey.includes('pdf') && (
+                                <div style={fieldStyle}>
+                                    <label style={labelStyle}>PDF Password (optional)</label>
+                                    <input
+                                        type="password"
+                                        value={pdfPassword}
+                                        onChange={e => setPdfPassword(e.target.value)}
+                                        placeholder={hasPdfPassword ? "******** (Password is set)" : "Enter password to decrypt statements"}
+                                        style={inputStyle}
+                                    />
+                                    {hasPdfPassword && !pdfPassword && (
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                            A password is already saved. Only enter a new one to change it.
+                                        </span>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Save / Delete buttons */}
                             <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
