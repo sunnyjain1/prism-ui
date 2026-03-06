@@ -11,7 +11,7 @@ import {
 } from '../lib/services/SyncService';
 
 // Importer presets for quick setup
-const IMPORTER_PRESETS: Record<string, { label: string; query: string; pattern: string; key: string }> = {
+const IMPORTER_PRESETS: Record<string, { label: string; query: string; pattern: string; key: string; subjectMatchPattern?: string }> = {
     hdfc_savings: {
         label: 'HDFC Bank (Savings/Current)',
         query: 'from:alerts@hdfcbank.net subject:"Account Statement"',
@@ -39,6 +39,7 @@ const IMPORTER_PRESETS: Record<string, { label: string; query: string; pattern: 
     custom: {
         label: 'Custom Configuration',
         query: '',
+        subjectMatchPattern: '',
         pattern: '',
         key: ''
     }
@@ -75,6 +76,7 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
     // Form state
     const [preset, setPreset] = useState('custom');
     const [gmailQuery, setGmailQuery] = useState('');
+    const [subjectMatchPattern, setSubjectMatchPattern] = useState('');
     const [importerKey, setImporterKey] = useState('');
     const [intervalDays, setIntervalDays] = useState(30);
     const [filenamePattern, setFilenamePattern] = useState('');
@@ -97,6 +99,7 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
             if (config) {
                 setSyncConfig(config);
                 setGmailQuery(config.gmail_search_query);
+                setSubjectMatchPattern(config.subject_match_pattern || '');
                 setImporterKey(config.importer_key);
                 setIntervalDays(config.sync_interval_days);
                 setFilenamePattern(config.attachment_filename_pattern || '');
@@ -139,6 +142,7 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
         if (presetKey !== 'custom') {
             const p = IMPORTER_PRESETS[presetKey];
             setGmailQuery(p.query);
+            setSubjectMatchPattern(p.subjectMatchPattern || '');
             setImporterKey(p.key);
             setFilenamePattern(p.pattern);
         }
@@ -153,6 +157,7 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
         try {
             const config = await createOrUpdateSyncConfig(accountId, {
                 gmail_search_query: gmailQuery,
+                subject_match_pattern: subjectMatchPattern || undefined,
                 importer_key: importerKey,
                 sync_interval_days: intervalDays,
                 attachment_filename_pattern: filenamePattern || undefined,
@@ -176,6 +181,7 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
             await deleteSyncConfig(accountId);
             setSyncConfig(null);
             setGmailQuery('');
+            setSubjectMatchPattern('');
             setImporterKey('');
             setPreset('custom');
             setPdfPassword('');
@@ -322,6 +328,21 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
                                 />
                                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
                                     Gmail search query to find statement emails
+                                </span>
+                            </div>
+
+                            {/* Subject Match Pattern */}
+                            <div style={fieldStyle}>
+                                <label style={labelStyle}>Subject Match Pattern (optional regex)</label>
+                                <input
+                                    type="text"
+                                    value={subjectMatchPattern}
+                                    onChange={e => setSubjectMatchPattern(e.target.value)}
+                                    placeholder='e.g., ^Account Statement.*'
+                                    style={inputStyle}
+                                />
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                    Regex pattern to filter found emails by subject line (useful for dynamic months/years)
                                 </span>
                             </div>
 

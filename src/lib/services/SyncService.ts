@@ -33,6 +33,7 @@ export interface SyncConfig {
     importer_key: string;
     sync_interval_days: number;
     attachment_filename_pattern: string | null;
+    subject_match_pattern: string | null;
     last_synced_at: string | null;
     last_sync_status: 'idle' | 'syncing' | 'success' | 'failed';
     last_sync_error: string | null;
@@ -97,6 +98,7 @@ export async function createOrUpdateSyncConfig(
         importer_key: string;
         sync_interval_days?: number;
         attachment_filename_pattern?: string;
+        subject_match_pattern?: string;
         is_enabled?: boolean;
         pdf_password?: string;
     }
@@ -116,6 +118,7 @@ export async function updateSyncConfig(
         importer_key: string;
         sync_interval_days: number;
         attachment_filename_pattern: string;
+        subject_match_pattern: string;
         is_enabled: boolean;
         pdf_password: string;
     }>
