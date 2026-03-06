@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { accountService, transactionService } from '../lib/services/context';
 import type { Account } from '../lib/core/models';
 import { CreditCard, Landmark, Banknote, TrendingUp, Plus, Pencil, X, Trash2, RotateCcw, ChevronDown, RefreshCw, Check, AlertTriangle, Clock, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import { formatCurrency } from '../lib/utils/formatters';
-import { getAllSyncStatus, postGmailCallback } from '../lib/services/SyncService';
+import { getAllSyncStatus } from '../lib/services/SyncService';
 import type { SyncConfig } from '../lib/services/SyncService';
 import SyncSettings from './SyncSettings';
 
 
 const Accounts: React.FC = () => {
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [deletedAccounts, setDeletedAccounts] = useState<Account[]>([]);
     const [showDeleted, setShowDeleted] = useState(false);
@@ -64,22 +63,6 @@ const Accounts: React.FC = () => {
     useEffect(() => {
         loadAccounts();
         loadSyncStatuses();
-
-        // Handle Google OAuth callback: extract code from URL and POST to backend
-        const code = searchParams.get('code');
-        if (code) {
-            // Clean the URL immediately
-            setSearchParams({}, { replace: true });
-            postGmailCallback(code)
-                .then(() => {
-                    loadSyncStatuses();
-                    alert('✅ Gmail connected successfully!');
-                })
-                .catch((e) => {
-                    alert(`❌ Gmail connection failed: ${e.message}`);
-                });
-        }
-
         const handleCurrency = (e: any) => setDisplayCurrency(e.detail);
         window.addEventListener('currency-changed', handleCurrency);
         return () => window.removeEventListener('currency-changed', handleCurrency);

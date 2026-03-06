@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Accounts from './components/Accounts';
@@ -17,10 +17,13 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CryptoProvider } from './contexts/CryptoContext';
 import { PrivacyProvider } from './contexts/PrivacyContext';
 import { Plus, Loader2 } from 'lucide-react';
+import { postGmailCallback } from './lib/services/SyncService';
 
 const AuthController: React.FC = () => {
     const { token, isLoading } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [authView, setAuthView] = useState<'landing' | 'login' | 'register'>('landing');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [dialogProps, setDialogProps] = useState<{ accountId?: string; date?: string; }>({});
@@ -41,6 +44,23 @@ const AuthController: React.FC = () => {
             window.removeEventListener('open-transaction-dialog', handleOpenDialog);
         };
     }, []);
+
+    // Handle Gmail OAuth callback at root level
+    useEffect(() => {
+        if (!token) return; // Only handle if logged in
+        const code = searchParams.get('code');
+        if (code) {
+            setSearchParams({}, { replace: true });
+            postGmailCallback(code)
+                .then(() => {
+                    navigate('/accounts?gmail=connected');
+                })
+                .catch((e) => {
+                    alert(`Gmail connection failed: ${e.message}`);
+                    navigate('/accounts');
+                });
+        }
+    }, [token, searchParams]);
 
     if (isLoading) {
         return (
