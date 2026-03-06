@@ -54,8 +54,17 @@ export interface SyncResult {
 
 // --- Gmail Connection ---
 
-export async function getGmailAuthUrl(): Promise<{ auth_url: string }> {
+export async function getGmailAuthUrl(): Promise<{ auth_url: string; state: string }> {
     const response = await fetch(`${API_URL}/gmail/auth-url`, { headers: getHeaders() });
+    return handleResponse(response);
+}
+
+export async function postGmailCallback(code: string): Promise<{ message: string; email: string | null }> {
+    const response = await fetch(`${API_URL}/gmail/callback`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ code })
+    });
     return handleResponse(response);
 }
 
