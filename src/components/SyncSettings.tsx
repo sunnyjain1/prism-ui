@@ -532,8 +532,15 @@ const SyncSettings: React.FC<SyncSettingsProps> = ({ accountId, accountName, onC
                                     }}>
                                         {syncResult.status === 'success' ? (
                                             <div style={{ color: '#10b981' }}>
-                                                <strong>✅ Sync complete!</strong> {syncResult.transactions_imported} transactions imported
-                                                {syncResult.duplicates_skipped > 0 && `, ${syncResult.duplicates_skipped} duplicates skipped`}
+                                                <strong>✅ Sync complete!</strong>{' '}
+                                                {syncResult.transactions_imported === 0 && syncResult.error ? (
+                                                    <span>{syncResult.error}</span>
+                                                ) : (
+                                                    <span>
+                                                        {syncResult.transactions_imported} transactions imported
+                                                        {syncResult.duplicates_skipped > 0 && `, ${syncResult.duplicates_skipped} duplicates skipped`}
+                                                    </span>
+                                                )}
                                             </div>
                                         ) : (
                                             <div style={{ color: '#ef4444' }}>
