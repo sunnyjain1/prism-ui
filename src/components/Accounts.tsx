@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { accountService, transactionService } from '../lib/services/context';
 import type { Account } from '../lib/core/models';
-import { CreditCard, Landmark, Banknote, TrendingUp, Plus, Pencil, X, Trash2, RotateCcw, ChevronDown } from 'lucide-react';
+import { CreditCard, Landmark, Banknote, TrendingUp, Plus, Pencil, X, Trash2, RotateCcw, ChevronDown, RefreshCw, Check, AlertTriangle, Clock, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import { formatCurrency } from '../lib/utils/formatters';
+import { getAllSyncStatus } from '../lib/services/SyncService';
+import type { SyncConfig } from '../lib/services/SyncService';
+import SyncSettings from './SyncSettings';
 
 
 const Accounts: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [deletedAccounts, setDeletedAccounts] = useState<Account[]>([]);
     const [showDeleted, setShowDeleted] = useState(false);
@@ -28,6 +32,10 @@ const Accounts: React.FC = () => {
     const [editCurrency, setEditCurrency] = useState('INR');
     const { isPrivacyMode } = usePrivacy();
 
+    // Sync state
+    const [syncStatuses, setSyncStatuses] = useState<Record<string, SyncConfig>>({});
+    const [syncSettingsAccount, setSyncSettingsAccount] = useState<Account | null>(null);
+
 
     const loadAccounts = async () => {
         try {
@@ -42,8 +50,25 @@ const Accounts: React.FC = () => {
         }
     };
 
+    const loadSyncStatuses = async () => {
+        try {
+            const statuses = await getAllSyncStatus();
+            const map: Record<string, SyncConfig> = {};
+            statuses.forEach(s => { map[s.account_id] = s; });
+            setSyncStatuses(map);
+        } catch (e) {
+            // Sync API might not be available; silently ignore
+        }
+    };
+
     useEffect(() => {
         loadAccounts();
+        loadSyncStatuses();
+        // Check for Gmail callback redirect
+        if (searchParams.get('gmail') === 'connected') {
+            // Could show a toast; for now just refresh
+            loadSyncStatuses();
+        }
         const handleCurrency = (e: any) => setDisplayCurrency(e.detail);
         window.addEventListener('currency-changed', handleCurrency);
         return () => window.removeEventListener('currency-changed', handleCurrency);
@@ -336,26 +361,72 @@ const Accounts: React.FC = () => {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                 <div>
                                                     <h3 style={{ fontSize: '17px', fontWeight: '700', marginBottom: '2px' }}>{account.name}</h3>
-                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                         {isCredit ? `**** **** **** ${account.id.slice(-4)}` : `${account.currency} • ${account.type}`}
+                                                        {/* Sync Status Badge */}
+                                                        {syncStatuses[account.id] && (() => {
+                                                            const sync = syncStatuses[account.id];
+                                                            const badgeColors: Record<string, { bg: string; color: string }> = {
+                                                                success: { bg: 'rgba(16,185,129,0.12)', color: '#10b981' },
+                                                                failed: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444' },
+                                                                syncing: { bg: 'rgba(99,102,241,0.12)', color: '#6366f1' },
+                                                                idle: { bg: 'rgba(148,163,184,0.12)', color: '#94a3b8' }
+                                                            };
+                                                            const badge = badgeColors[sync.last_sync_status] || badgeColors.idle;
+                                                            const icon = sync.last_sync_status === 'success' ? <Check size={10} />
+                                                                : sync.last_sync_status === 'failed' ? <AlertTriangle size={10} />
+                                                                    : sync.last_sync_status === 'syncing' ? <Loader2 size={10} className="animate-spin" />
+                                                                        : <Clock size={10} />;
+                                                            const label = sync.last_sync_status === 'success'
+                                                                ? (sync.last_synced_at ? `Synced ${new Date(sync.last_synced_at).toLocaleDateString()}` : 'Synced')
+                                                                : sync.last_sync_status === 'syncing' ? 'Syncing...'
+                                                                    : sync.last_sync_status === 'failed' ? 'Sync failed'
+                                                                        : 'Pending';
+                                                            return (
+                                                                <span style={{
+                                                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                                    padding: '1px 8px', borderRadius: '6px', fontSize: '10px',
+                                                                    fontWeight: '600', background: badge.bg, color: badge.color
+                                                                }}>
+                                                                    {icon} {label}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 </div>
-                                                <button
-                                                    onClick={(e) => openEditDialog(e, account)}
-                                                    disabled={user?.role === 'viewer'}
-                                                    style={{
-                                                        background: 'var(--bg-main)', border: 'none', color: 'var(--text-muted)',
-                                                        padding: '6px', cursor: user?.role === 'viewer' ? 'not-allowed' : 'pointer',
-                                                        opacity: user?.role === 'viewer' ? 0.3 : 0.6, display: 'flex',
-                                                        alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
-                                                        borderRadius: '8px'
-                                                    }}
-                                                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--border-soft)'; }}
-                                                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.background = 'var(--bg-main)'; }}
-                                                    title="Edit Account"
-                                                >
-                                                    <Pencil size={14} />
-                                                </button>
+                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setSyncSettingsAccount(account); }}
+                                                        style={{
+                                                            background: 'var(--bg-main)', border: 'none', color: 'var(--text-muted)',
+                                                            padding: '6px', cursor: 'pointer',
+                                                            opacity: 0.6, display: 'flex',
+                                                            alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+                                                            borderRadius: '8px'
+                                                        }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--border-soft)'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.background = 'var(--bg-main)'; }}
+                                                        title="Sync Settings"
+                                                    >
+                                                        <RefreshCw size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => openEditDialog(e, account)}
+                                                        disabled={user?.role === 'viewer'}
+                                                        style={{
+                                                            background: 'var(--bg-main)', border: 'none', color: 'var(--text-muted)',
+                                                            padding: '6px', cursor: user?.role === 'viewer' ? 'not-allowed' : 'pointer',
+                                                            opacity: user?.role === 'viewer' ? 0.3 : 0.6, display: 'flex',
+                                                            alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+                                                            borderRadius: '8px'
+                                                        }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--border-soft)'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.background = 'var(--bg-main)'; }}
+                                                        title="Edit Account"
+                                                    >
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             <div style={{ marginTop: 'auto' }}>
@@ -574,6 +645,14 @@ const Accounts: React.FC = () => {
                         </div>
                     )}
                 </div>
+            )}
+            {/* Sync Settings Dialog */}
+            {syncSettingsAccount && (
+                <SyncSettings
+                    accountId={syncSettingsAccount.id}
+                    accountName={syncSettingsAccount.name}
+                    onClose={() => { setSyncSettingsAccount(null); loadSyncStatuses(); }}
+                />
             )}
         </div>
     );
